@@ -467,6 +467,8 @@ function bindInput() {
   bindQuizKeys(state, submitQuiz, goNextQuiz);
   el.newMapTarget.addEventListener("click", () => {
     if (state.map.explore) return;
+    const live = currentRun(state);
+    if (state.map.waiting && !(live && live.finished)) return;
     cancelRecap();
     const run = currentRun(state);
     if (run && run.finished) {

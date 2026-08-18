@@ -181,7 +181,7 @@ function parkReplayChip() {
 export function renderScore(state) {
   const run = currentRun(state);
   const explore = state.mode === "map" && state.map.explore;
-  const hideBox = state.mode === "study" || !run;
+  const hideBox = state.mode === "study" || !run || explore;
   if (el.scoreBox) el.scoreBox.classList.toggle("hidden", hideBox);
   if (el.runDock) el.runDock.classList.toggle("hidden", hideBox);
   paintReplayChip(run);
@@ -201,6 +201,9 @@ export function renderScore(state) {
 
   if (el.newMapTarget) {
     el.newMapTarget.textContent = run.finished ? "Play again" : "Next";
+    const waiting = !!(state.mode === "map" && state.map.waiting && !run.finished);
+    el.newMapTarget.classList.toggle("hidden", waiting);
+    el.newMapTarget.disabled = waiting || !!(state.mode === "map" && state.map.explore);
   }
   if (el.nextBtn) {
     el.nextBtn.textContent = run.finished ? "Play again" : "Next Question →";
@@ -407,7 +410,12 @@ export function renderMapMode(state) {
     ? "Browsing — guessing paused"
     : "Where is this country?";
 
-  el.newMapTarget.disabled = explore;
+  if (el.newMapTarget) {
+    const run = currentRun(state);
+    const waiting = !!(!explore && state.map.waiting && !(run && run.finished));
+    el.newMapTarget.disabled = explore || waiting;
+    el.newMapTarget.classList.toggle("hidden", waiting);
+  }
 
   if (explore) {
     el.toggleExplore.textContent = "Back to guessing";
@@ -420,7 +428,7 @@ export function renderMapMode(state) {
     return;
   }
 
-  el.toggleExplore.textContent = "Exit and explore";
+  el.toggleExplore.textContent = "Exit to Explore";
   el.toggleExplore.classList.remove("primary");
   el.toggleExplore.title = "Leave guessing and explore the map. This resets your map score and streak.";
 }

@@ -1,6 +1,7 @@
 import { awardCorrect, awardWrong, currentRun, emptyQuiz } from "./state.js";
 import { filterPool, shuffle } from "./catalog.js";
-import { dealNext, touchStart } from "./run.js";
+import { dealNext, dealPool, recordTurn, touchStart } from "./run.js";
+import { modeSettings } from "./settings.js";
 
 function normalize(text) {
   return String(text || "")
@@ -19,7 +20,7 @@ export function isTypeIn(state) {
   if (state.quiz && state.quiz.country && state.quiz.answerStyle) {
     return state.quiz.answerStyle === "type";
   }
-  return state.settings.answerStyle === "type";
+  return modeSettings(state).answerStyle === "type";
 }
 
 export function suggestAnswers(state, text, pool) {
@@ -32,9 +33,13 @@ export function suggestAnswers(state, text, pool) {
 }
 
 export function startQuizRound(state, countries) {
-  const pool = filterPool(state, countries);
-  const typed = state.settings.answerStyle === "type";
-  if (!typed && pool.length < 4) {
+  const regionPool = filterPool(state, countries);
+  const run = currentRun(state);
+  const pool = dealPool(countries, run, state.selectedNames);
+  const typed = modeSettings(state).answerStyle === "type";
+  const focused = !!(run && run.poolNames && run.poolNames.size);
+  const choiceSource = regionPool.length >= 4 ? regionPool : focused ? countries : regionPool;
+  if (!typed && choiceSource.length < 4) {
     state.quiz = { ...emptyQuiz(), error: "not-enough" };
     return;
   }
@@ -43,14 +48,13 @@ export function startQuizRound(state, countries) {
     return;
   }
 
-  const run = currentRun(state);
   if (run && run.finished) {
     state.quiz = { ...emptyQuiz(), error: "finished" };
     return;
   }
 
   const country = run
-    ? dealNext(pool, run, state.settings.repeatPolicy)
+    ? dealNext(pool, run, modeSettings(state).repeatPolicy)
     : null;
   if (!country) {
     state.quiz = {
@@ -62,7 +66,7 @@ export function startQuizRound(state, countries) {
 
   const others = typed
     ? []
-    : shuffle(pool.filter((c) => c.name !== country.name)).slice(0, 3);
+    : shuffle(choiceSource.filter((c) => c.name !== country.name)).slice(0, 3);
 
   state.quiz = {
     mode: state.mode,
@@ -95,6 +99,7 @@ export function gradeQuizAnswer(state, index) {
 
   if (correct) awardCorrect(state, state.quiz.country.name);
   else awardWrong(state, state.quiz.country.name);
+  logQuizTurn(state, optionLabel(state, option));
 }
 
 export function gradeTypedAnswer(state, text) {
@@ -106,6 +111,22 @@ export function gradeTypedAnswer(state, text) {
   state.quiz.correct = correct;
   if (correct) awardCorrect(state, state.quiz.country.name);
   else awardWrong(state, state.quiz.country.name);
+  logQuizTurn(state, String(text || "").trim());
+}
+
+function logQuizTurn(state, guess) {
+  const run = currentRun(state);
+  const country = state.quiz.country;
+  if (!run || !country) return;
+  const award = run.lastAward;
+  recordTurn(run, {
+    name: country.name,
+    correct: !!state.quiz.correct,
+    guess,
+    answer: state.mode === "capitals" ? country.capital : country.name,
+    points: award ? award.points : 0,
+    streak: award ? award.streak : run.streak,
+  });
 }
 
 export function optionLabel(state, option) {

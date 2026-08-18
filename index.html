@@ -3,65 +3,104 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Country Learner – Flags, Capitals & Map</title>
+  <title>Nation Nexus</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=top-scores" />
+  <link rel="stylesheet" href="styles.css?v=map-orig" />
 </head>
 <body class="is-home">
   <div class="container">
     <section id="home" class="home">
       <header class="home-header">
-        <h1>🌍 Country Learner</h1>
-        <p>Guess the country</p>
-        <a class="scoreboard-link" href="#/scoreboard">Scoreboard</a>
+        <h1>Nation Nexus</h1>
+        <div class="home-header-links">
+          <a class="ghost-link" href="#/how">How to play</a>
+          <a class="scoreboard-link is-compact" href="#/scoreboard"><span class="link-wide">Scoreboard</span><span class="link-narrow">Scores</span></a>
+        </div>
       </header>
+      <div class="home-toolbar" id="homeToolbar"></div>
       <div class="game-grid" id="gameGrid">
-        <div class="game-card-wrap">
+        <div class="game-card-wrap" data-card="map">
           <a class="game-card" href="#/map" data-mode="map">
-            <span class="game-card-kicker">Minigame</span>
-            <h2>Where is it?</h2>
+            <div class="game-card-top">
+              <h2 class="game-card-name">Nation Needle</h2>
+              <span class="game-card-badge hidden" data-badge="map">In progress</span>
+            </div>
             <p>A country is named. Click it on the map.</p>
-            <span class="game-card-status" data-status="map">New game</span>
+            <div class="game-card-progress hidden" data-progress="map">
+              <div class="game-card-bar"><span></span></div>
+              <span class="game-card-count" data-count="map"></span>
+            </div>
+            <p class="game-card-meta" data-meta="map"></p>
           </a>
-          <a class="card-scores" href="#/scoreboard/map">Scores</a>
+          <div class="game-card-foot">
+            <span class="game-card-status" data-status="map">Play</span>
+            <a class="card-scores" href="#/scoreboard/map">Scores</a>
+          </div>
         </div>
-        <div class="game-card-wrap">
+        <div class="game-card-wrap" data-card="flags">
           <a class="game-card" href="#/flags" data-mode="flags">
-            <span class="game-card-kicker">Minigame</span>
-            <h2>Which flag?</h2>
+            <div class="game-card-top">
+              <h2 class="game-card-name">Flag Master</h2>
+              <span class="game-card-badge hidden" data-badge="flags">In progress</span>
+            </div>
             <p>See a flag. Pick the country.</p>
-            <span class="game-card-status" data-status="flags">New game</span>
+            <div class="game-card-progress hidden" data-progress="flags">
+              <div class="game-card-bar"><span></span></div>
+              <span class="game-card-count" data-count="flags"></span>
+            </div>
+            <p class="game-card-meta" data-meta="flags"></p>
           </a>
-          <a class="card-scores" href="#/scoreboard/flags">Scores</a>
+          <div class="game-card-foot">
+            <span class="game-card-status" data-status="flags">Play</span>
+            <a class="card-scores" href="#/scoreboard/flags">Scores</a>
+          </div>
         </div>
-        <div class="game-card-wrap">
+        <div class="game-card-wrap" data-card="capitals">
           <a class="game-card" href="#/capitals" data-mode="capitals">
-            <span class="game-card-kicker">Minigame</span>
-            <h2>What capital?</h2>
+            <div class="game-card-top">
+              <h2 class="game-card-name">Capital Quest</h2>
+              <span class="game-card-badge hidden" data-badge="capitals">In progress</span>
+            </div>
             <p>See a country. Pick its capital.</p>
-            <span class="game-card-status" data-status="capitals">New game</span>
+            <div class="game-card-progress hidden" data-progress="capitals">
+              <div class="game-card-bar"><span></span></div>
+              <span class="game-card-count" data-count="capitals"></span>
+            </div>
+            <p class="game-card-meta" data-meta="capitals"></p>
           </a>
-          <a class="card-scores" href="#/scoreboard/capitals">Scores</a>
+          <div class="game-card-foot">
+            <span class="game-card-status" data-status="capitals">Play</span>
+            <a class="card-scores" href="#/scoreboard/capitals">Scores</a>
+          </div>
         </div>
       </div>
       <div class="home-links">
+        <a class="study-link" href="#/how">How scoring works</a>
         <a class="study-link" href="#/study">Study the countries</a>
       </div>
     </section>
 
     <div id="playChrome" class="play-chrome hidden">
       <a class="back-games" id="backHome" href="#/">← Games</a>
-      <h2 id="playTitle">Where is it?</h2>
+      <div class="play-chrome-brand" id="playBrand">
+        <div id="playTitle" class="play-title game-lockup">Nation Needle</div>
+        <p class="play-kicker" id="playKicker">Find the country</p>
+        <div class="map-mode-chip replay-chip" id="replayChip" hidden></div>
+      </div>
       <div class="play-chrome-actions">
         <div class="run-actions" id="runActions">
-          <button type="button" class="btn-glass is-ok" id="newGame">New game</button>
-          <button type="button" class="btn-glass is-danger" id="exitGame">Exit game</button>
+          <button type="button" class="btn-glass is-ok" id="newGame">New<span class="link-wide"> game</span></button>
+          <button type="button" class="btn-glass is-danger" id="exitGame">Exit<span class="link-wide"> game</span></button>
         </div>
-        <a class="scoreboard-link is-compact" id="scoreboardNav" href="#/scoreboard">Scoreboard</a>
+        <a class="scoreboard-link is-compact" id="scoreboardNav" href="#/scoreboard"><span class="link-wide">Scoreboard</span><span class="link-narrow">Scores</span></a>
         <button type="button" class="settings-btn" id="settingsBtn" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settingsOverlay">⚙</button>
       </div>
     </div>
+
+    <section id="guide" class="guide hidden">
+      <div class="guide-body" id="guideBody"></div>
+    </section>
 
     <section id="scoreboard" class="scoreboard hidden">
       <div class="scoreboard-list" id="scoreboardList"></div>
@@ -92,32 +131,41 @@
     </div>
 
     <!-- Map Quiz -->
-    <div id="mapArea" class="is-guess" style="display:none">
+    <div id="mapArea" class="is-guess">
       <div class="map-wrap">
         <div id="map"></div>
         <div class="map-hud" id="mapPrompt">
           <div class="hud-tl" id="hudTl">
             <div class="filter-wrap" id="filterWrap">
-              <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false">
+              <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterLayer">
                 All regions ▾
               </button>
-              <div class="filter-pop" id="filterPop">
-                <div class="filter-pop-head">
-                  <span class="filter-pop-title" id="filterPopTitle">0 / 0 countries</span>
-                  <div class="filter-pop-actions">
-                    <button type="button" id="filterAll">All</button>
-                    <button type="button" id="filterNone">None</button>
+              <div class="filter-layer" id="filterLayer" hidden>
+                <button type="button" class="filter-backdrop" id="filterBackdrop" tabindex="-1" aria-label="Apply region changes"></button>
+                <div class="filter-pop" id="filterPop" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
+                  <div class="filter-pop-head">
+                    <h2 id="filterTitle">Regions</h2>
+                    <span class="filter-pop-title" id="filterPopTitle">0 / 0</span>
+                  </div>
+                  <div class="filter-pop-tools">
+                    <div class="filter-pop-actions">
+                      <button type="button" id="filterAll">All</button>
+                      <button type="button" id="filterNone">None</button>
+                    </div>
+                    <div class="filter-pop-actions">
+                      <button type="button" id="filterExpand">Expand</button>
+                      <button type="button" id="filterCollapse">Collapse</button>
+                    </div>
+                  </div>
+                  <div class="filter-tree" id="filterTree"></div>
+                  <div class="filter-pop-foot">
+                    <button type="button" class="btn-glass" id="filterDone">Done</button>
                   </div>
                 </div>
-                <div class="filter-pop-tools">
-                  <button type="button" id="filterExpand">Expand all</button>
-                  <button type="button" id="filterCollapse">Collapse all</button>
-                </div>
-                <div class="filter-tree" id="filterTree"></div>
               </div>
             </div>
           </div>
-          <div class="hud-tc">
+          <div class="hud-tc" id="hudTc">
             <div class="map-mode-chip" id="mapModeChip">Mode: Guess</div>
             <div class="map-target" id="mapTargetBlock">
               <div class="label" id="mapPromptLabel">Where is this country?</div>
@@ -140,22 +188,31 @@
           </div>
           <div class="hud-br" id="hudBr">
             <div class="run-dock" id="runDock">
+              <div class="streak-flare" id="streakFlare" hidden>
+                <span class="streak-flare-kicker" id="streakFlareKicker">HOT STREAK</span>
+                <span class="streak-flare-pts" id="streakFlarePts">+20</span>
+              </div>
               <div class="score-box" id="scoreBox">
                 <div class="stat" id="timerStat">
                   <span class="stat-label">Time</span>
                   <span class="stat-value" id="timer">0:00</span>
                 </div>
-                <div class="stat">
+                <div class="stat" id="pointsStat">
                   <span class="stat-label">Points</span>
                   <span class="stat-value" id="score">0</span>
+                  <span class="stat-float" id="scoreFloat"></span>
                 </div>
                 <div class="stat" id="progressStat">
                   <span class="stat-label">Set</span>
                   <span class="stat-value" id="progress">0/0</span>
                 </div>
                 <div class="stat streak" id="streakStat">
-                  <span class="stat-label">Streak</span>
-                  <span class="stat-value" id="streak">0</span>
+                  <span class="stat-label" id="streakLabel">Streak</span>
+                  <span class="streak-pips" id="streakPips" aria-hidden="true">
+                    <i></i><i></i><i></i><i></i><i></i>
+                  </span>
+                  <span class="stat-value" id="streakMod">Next +20</span>
+                  <span class="streak-count" id="streak">0</span>
                 </div>
               </div>
             </div>
@@ -166,7 +223,22 @@
 
     <!-- Study -->
     <div id="studyArea" class="hidden">
-      <div class="study-grid" id="studyGrid"></div>
+      <div id="countryPage" class="country-page hidden">
+        <a class="country-back" href="#/study">← All countries</a>
+        <div class="country-layout">
+          <div class="country-card" id="countryCard"></div>
+          <div class="country-map-wrap">
+            <div id="countryMap"></div>
+          </div>
+        </div>
+      </div>
+      <div id="studyBrowse">
+        <div class="study-search">
+          <input id="studySearch" type="search" placeholder="Search country, capital, or region" autocomplete="off" spellcheck="false" />
+          <span class="study-search-count" id="studySearchCount"></span>
+        </div>
+        <div class="study-grid" id="studyGrid"></div>
+      </div>
     </div>
 
     <footer>Map tiles need internet • Quizzes work offline</footer>
@@ -177,7 +249,7 @@
     <div class="confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
       <p class="confirm-kicker">Warning</p>
       <h2 id="confirmTitle">Change regions?</h2>
-      <p id="confirmMessage">This starts a new score for Map, Flags, and Capitals.</p>
+      <p id="confirmMessage">This starts a new score for Nation Needle, Flag Master, and Capital Quest.</p>
       <div class="confirm-actions">
         <button type="button" id="confirmCancel">Cancel</button>
         <button type="button" class="confirm-ok" id="confirmOk">Change regions</button>
@@ -192,20 +264,23 @@
         <h2 id="settingsTitle">Settings</h2>
         <button type="button" class="settings-close" id="settingsClose">Close</button>
       </div>
-      <label class="settings-row">
+      <p class="settings-score settings-streak" data-score="streak">Streak +20 per extra correct, max +80</p>
+      <label class="settings-row" data-for="map">
         <input type="checkbox" id="hintContinent" checked />
         <span>
           <strong>Show continent hint</strong>
           <small>Display the continent under the country you’re looking for</small>
+          <small class="settings-score is-penalty" data-score="hint">80 per correct instead of 100 (−20%)</small>
         </span>
       </label>
-      <fieldset class="settings-fieldset">
+      <fieldset class="settings-fieldset" data-for="map flags capitals">
         <legend>Ask a country again</legend>
         <label class="settings-row">
-          <input type="radio" name="repeatPolicy" value="cycle" checked />
+          <input type="radio" name="repeatPolicy" value="cycle" />
           <span>
             <strong>After the full set</strong>
             <small>Each country once, then the set ends. Play again for another lap (score keeps going)</small>
+            <small class="settings-score" data-score="repeat-cycle">100 per correct. Play again keeps this score.</small>
           </span>
         </label>
         <label class="settings-row">
@@ -213,6 +288,7 @@
           <span>
             <strong>Anytime</strong>
             <small>Random, but not the same country twice in a row</small>
+            <small class="settings-score" data-score="repeat-random">100 per correct. Countries can repeat.</small>
           </span>
         </label>
         <label class="settings-row">
@@ -220,30 +296,34 @@
           <span>
             <strong>Only misses</strong>
             <small>Full set once, then replay the ones you got wrong</small>
+            <small class="settings-score" data-score="repeat-misses">100 per correct, +50 when you clear a miss.</small>
           </span>
         </label>
         <label class="settings-row">
-          <input type="radio" name="repeatPolicy" value="once" />
+          <input type="radio" name="repeatPolicy" value="once" checked />
           <span>
             <strong>Never — end the set</strong>
             <small>Stop after every country. Play again starts a new score</small>
+            <small class="settings-score" data-score="repeat-once">100 per correct. Set ends; Play again starts a new score.</small>
           </span>
         </label>
       </fieldset>
-      <fieldset class="settings-fieldset">
-        <legend>How to answer (flags & capitals)</legend>
+      <fieldset class="settings-fieldset" data-for="flags capitals">
+        <legend>How to answer</legend>
         <label class="settings-row">
           <input type="radio" name="answerStyle" value="choices" checked />
           <span>
             <strong>Multiple choice</strong>
             <small>Pick from four options</small>
+            <small class="settings-score" data-score="style-choices">100 per correct</small>
           </span>
         </label>
         <label class="settings-row">
           <input type="radio" name="answerStyle" value="type" />
           <span>
             <strong>Type with autocomplete</strong>
-            <small>Type the country or capital. Worth 200 points instead of 100.</small>
+            <small>Type the country or capital</small>
+            <small class="settings-score" data-score="style-type">200 per correct</small>
           </span>
         </label>
       </fieldset>
@@ -252,6 +332,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script type="module" src="js/main.js?v=map-parse"></script>
+  <script type="module" src="js/main.js?v=map-orig"></script>
 </body>
 </html>

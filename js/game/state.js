@@ -1,7 +1,8 @@
+import { getCountry } from "./catalog.js";
 import { allCountryNames } from "./regions.js";
 import { archiveAllProgress, archiveRun } from "./history.js";
-import { emptyRun, markAsked, pauseClock, PLAYABLE_MODES, pointsForCorrect } from "./run.js";
-import { loadSettings } from "./settings.js";
+import { emptyRun, markAsked, pauseClock, PLAYABLE_MODES, poolSize, pointsForCorrect, streakBonus } from "./run.js";
+import { loadSettings, modeSettings } from "./settings.js";
 
 export const MODES = {
   HOME: "home",
@@ -11,6 +12,7 @@ export const MODES = {
   STUDY: "study",
   SCOREBOARD: "scoreboard",
   BREAKDOWN: "breakdown",
+  HOW: "how",
 };
 
 export function createState() {
@@ -65,27 +67,59 @@ export function currentRun(state) {
 
 function finishIfComplete(state) {
   const run = currentRun(state);
-  if (!run || state.settings.repeatPolicy === "random") return;
-  const total = state.selectedNames.size;
+  const policy = modeSettings(state).repeatPolicy;
+  if (!run || policy === "random") return;
+  const total = poolSize(run, state.selectedNames);
   if (total <= 0 || run.asked.size < total) return;
-  if (state.settings.repeatPolicy === "misses" && run.misses.size > 0) return;
+  if (policy === "misses" && run.misses.size > 0) return;
   run.finished = true;
+}
+
+export function beginReplay(state, mode, names) {
+  const run = emptyRun();
+  const pool = [];
+  (names || []).forEach((name) => {
+    if (typeof name === "string" && getCountry(name) && !pool.includes(name)) {
+      pool.push(name);
+    }
+  });
+  if (pool.length) run.poolNames = new Set(pool);
+  state.runs[mode] = run;
+  return run;
 }
 
 export function awardCorrect(state, name) {
   const run = currentRun(state);
-  if (!run) return;
+  if (!run) return null;
   const gained = pointsForCorrect(state, name);
-  markAsked(run, name, true, state.settings.repeatPolicy);
+  markAsked(run, name, true, modeSettings(state).repeatPolicy);
   run.points += gained;
+  run.lastAward = {
+    hit: true,
+    points: gained,
+    bonus: streakBonus(run.streak),
+    streak: run.streak,
+  };
   finishIfComplete(state);
+  return run.lastAward;
 }
 
 export function awardWrong(state, name) {
   const run = currentRun(state);
-  if (!run) return;
-  markAsked(run, name, false, state.settings.repeatPolicy);
+  if (!run) return null;
+  const lostStreak = run.streak;
+  const lostBonus = streakBonus(lostStreak);
+  markAsked(run, name, false, modeSettings(state).repeatPolicy);
+  run.lastAward = {
+    hit: false,
+    points: 0,
+    bonus: 0,
+    streak: 0,
+    lostStreak,
+    lostBonus,
+  };
   finishIfComplete(state);
+  return run.lastAward;
 }
 
 export function resetRun(state, mode) {

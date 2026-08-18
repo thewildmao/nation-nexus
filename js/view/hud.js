@@ -1,7 +1,137 @@
 import { themeForCountry } from "../game/regions.js";
+import { poolSize, STREAK_STEP, streakBonus } from "../game/run.js";
+import { modeSettings } from "../game/settings.js";
 import { currentRun } from "../game/state.js";
 import { el } from "./dom.js";
-import { pageTitle, playTitle } from "./home.js";
+import { fillLockup, pageTitle, playKicker, playTitle } from "./identity.js";
+
+function popValue(node, value) {
+  if (!node) return;
+  const next = String(value);
+  if (node.textContent === next) return;
+  node.textContent = next;
+  node.classList.remove("is-pop");
+  void node.offsetWidth;
+  node.classList.add("is-pop");
+}
+
+let flareTimer = 0;
+let brokeTimer = 0;
+
+function hideFlare() {
+  if (!el.streakFlare) return;
+  el.streakFlare.classList.remove("is-show", "is-max", "is-broke");
+  el.streakFlare.hidden = true;
+}
+
+function showStreakFlare({ hit, streak, bonus, lostStreak, lostBonus }) {
+  if (!el.streakFlare) return;
+  let kicker = "";
+  let pts = "";
+  let broke = false;
+  let max = false;
+  if (hit && bonus > 0) {
+    kicker = streak >= 5 ? "ON FIRE" : streak >= 3 ? "HOT STREAK" : `STREAK ×${streak}`;
+    pts = `+${bonus}`;
+    max = streak >= 5;
+  } else if (!hit && lostBonus > 0) {
+    kicker = lostStreak >= 5 ? "FIRE OUT" : "STREAK BROKEN";
+    pts = `−${lostBonus}`;
+    broke = true;
+    max = lostStreak >= 5;
+  } else {
+    return;
+  }
+  if (el.streakFlareKicker) el.streakFlareKicker.textContent = kicker;
+  if (el.streakFlarePts) el.streakFlarePts.textContent = pts;
+  el.streakFlare.hidden = false;
+  el.streakFlare.classList.remove("is-show", "is-max", "is-broke");
+  void el.streakFlare.offsetWidth;
+  el.streakFlare.classList.toggle("is-max", max);
+  el.streakFlare.classList.toggle("is-broke", broke);
+  el.streakFlare.classList.add("is-show");
+  window.clearTimeout(flareTimer);
+  flareTimer = window.setTimeout(hideFlare, broke ? 1100 : 900);
+}
+
+function flashGain(points) {
+  if (!el.scoreFloat || !points) return;
+  el.scoreFloat.textContent = `+${points}`;
+  el.scoreFloat.classList.remove("is-on");
+  void el.scoreFloat.offsetWidth;
+  el.scoreFloat.classList.add("is-on");
+}
+
+function coolStreak() {
+  if (!el.streakStat) return;
+  el.streakStat.classList.remove("is-hot", "is-fire");
+  el.streakStat.classList.add("is-broke");
+  window.clearTimeout(brokeTimer);
+  brokeTimer = window.setTimeout(() => {
+    el.streakStat.classList.remove("is-broke");
+  }, 450);
+}
+
+function paintPips(streak) {
+  if (!el.streakPips) return;
+  const filled = Math.max(0, Math.min(5, streak));
+  [...el.streakPips.children].forEach((pip, i) => {
+    pip.classList.toggle("is-on", i < filled);
+  });
+}
+
+function paintStreakChip(streak) {
+  const hot = streak >= 2 && streak < 5;
+  const fire = streak >= 5;
+  const upcoming = streakBonus(streak + 1);
+  if (el.streakStat) {
+    el.streakStat.classList.toggle("is-hot", hot);
+    el.streakStat.classList.toggle("is-fire", fire);
+    if (streak > 0) el.streakStat.classList.remove("is-broke");
+  }
+  if (el.streakLabel) {
+    el.streakLabel.textContent = fire ? "FIRE" : hot ? "Hot" : "Streak";
+  }
+  if (el.streakMod) {
+    el.streakMod.textContent = streak === 0 ? `Next +${STREAK_STEP}` : `+${upcoming}`;
+  }
+  paintPips(streak);
+  if (el.streak) {
+    el.streak.classList.toggle("hidden", streak < 2);
+    popValue(el.streak, streak >= 2 ? `🔥${streak}` : String(streak));
+  }
+}
+
+function consumeAward(run) {
+  const award = run.lastAward;
+  if (!award) return;
+  run.lastAward = null;
+  if (award.hit) {
+    flashGain(award.points);
+    showStreakFlare(award);
+  } else {
+    showStreakFlare(award);
+    if (award.lostBonus > 0) coolStreak();
+    else hideFlare();
+  }
+}
+
+function replayCount(run) {
+  return run && run.poolNames && run.poolNames.size ? run.poolNames.size : 0;
+}
+
+function paintReplayChip(run) {
+  if (!el.replayChip) return;
+  const n = replayCount(run);
+  el.replayChip.hidden = n === 0;
+  if (!n) return;
+  el.replayChip.textContent = n === 1 ? "Replaying 1 miss" : `Replaying ${n} misses`;
+}
+
+function parkReplayChip() {
+  if (!el.replayChip || !el.playBrand) return;
+  el.playBrand.appendChild(el.replayChip);
+}
 
 export function renderScore(state) {
   const run = currentRun(state);
@@ -9,18 +139,18 @@ export function renderScore(state) {
   const hideBox = state.mode === "study" || !run;
   if (el.scoreBox) el.scoreBox.classList.toggle("hidden", hideBox);
   if (el.runDock) el.runDock.classList.toggle("hidden", hideBox);
+  paintReplayChip(run);
   if (!run) return;
 
-  el.score.textContent = run.points || 0;
-  el.streak.textContent = run.streak;
-  el.streakStat.classList.toggle("is-hot", run.streak >= 2 && run.streak < 5);
-  el.streakStat.classList.toggle("is-fire", run.streak >= 5);
+  consumeAward(run);
+  popValue(el.score, run.points || 0);
+  paintStreakChip(run.streak);
 
-  const showProgress = !explore && state.settings.repeatPolicy !== "random";
+  const showProgress = !explore && modeSettings(state).repeatPolicy !== "random";
   if (el.progressStat) {
     el.progressStat.classList.toggle("hidden", !showProgress);
     if (showProgress && el.progress) {
-      el.progress.textContent = `${run.asked.size}/${state.selectedNames.size}`;
+      el.progress.textContent = `${run.asked.size}/${poolSize(run, state.selectedNames)}`;
     }
   }
 
@@ -33,13 +163,25 @@ export function renderScore(state) {
 }
 
 export function setPlayTitle(mode, boardMode) {
+  const game =
+    (mode === "scoreboard" || mode === "breakdown") && boardMode ? boardMode : mode;
+  const extra =
+    mode === "scoreboard" ? "scores" : mode === "breakdown" ? "recap" : "";
   if (el.playTitle) {
-    el.playTitle.textContent =
-      mode === "scoreboard" && boardMode
-        ? `${playTitle(boardMode)} scores`
-        : mode === "breakdown" && boardMode
-          ? `${playTitle(boardMode)} recap`
-          : playTitle(mode);
+    if (game === "map" || game === "flags" || game === "capitals") {
+      fillLockup(el.playTitle, game, extra);
+    } else {
+      el.playTitle.replaceChildren();
+      const text = document.createElement("span");
+      text.className = "game-lockup-name";
+      text.textContent = playTitle(mode);
+      el.playTitle.append(text);
+    }
+  }
+  if (el.playKicker) {
+    const kick = extra ? "" : playKicker(game);
+    el.playKicker.textContent = kick;
+    el.playKicker.hidden = !kick;
   }
   document.title = pageTitle(mode, boardMode);
 }
@@ -48,15 +190,19 @@ export function showScreen(mode, boardMode) {
   const isHome = mode === "home";
   const isBoard = mode === "scoreboard";
   const isBreak = mode === "breakdown";
+  const isHow = mode === "how";
+  const recapOverMap = isBreak && boardMode === "map";
   if (el.home) el.home.classList.toggle("hidden", !isHome);
   if (el.scoreboard) el.scoreboard.classList.toggle("hidden", !isBoard);
+  if (el.guide) el.guide.classList.toggle("hidden", !isHow);
   if (el.breakdown) el.breakdown.classList.toggle("hidden", !isBreak);
   if (el.playChrome) el.playChrome.classList.toggle("hidden", isHome || isBreak);
+  parkReplayChip();
+  if (mode !== "map" && mode !== "flags" && mode !== "capitals") paintReplayChip(null);
   el.quizArea.classList.add("hidden");
   el.mapArea.style.display = "none";
   el.studyArea.classList.add("hidden");
 
-  const recapOverMap = isBreak && boardMode === "map";
   document.body.classList.toggle("is-home", isHome);
   document.body.classList.toggle("is-play", !isHome);
   document.body.classList.toggle("is-map", mode === "map" || recapOverMap);
@@ -73,11 +219,13 @@ export function showScreen(mode, boardMode) {
   if (el.settingsBtn) {
     el.settingsBtn.classList.toggle(
       "hidden",
-      mode === "home" || mode === "study" || mode === "scoreboard" || mode === "breakdown"
+      mode === "home" || mode === "study" || mode === "scoreboard" || mode === "breakdown" || mode === "how"
     );
   }
   const playing = mode === "map" || mode === "flags" || mode === "capitals";
   if (el.runActions) el.runActions.classList.toggle("hidden", !playing);
+  if (el.runDock) el.runDock.classList.toggle("hidden", !playing);
+  if (el.scoreBox) el.scoreBox.classList.toggle("hidden", !playing);
   if (el.scoreboardNav) {
     el.scoreboardNav.classList.toggle("hidden", mode === "scoreboard");
     const game =
@@ -87,9 +235,17 @@ export function showScreen(mode, boardMode) {
     el.scoreboardNav.href = game ? `#/scoreboard/${game}` : "#/scoreboard";
   }
 
+  if (el.controls) {
+    el.controls.classList.toggle("hidden", isHome || isBreak || isHow || mode === "map");
+  }
+
   if (mode === "map") {
     if (el.filterWrap && el.hudTl) el.hudTl.appendChild(el.filterWrap);
+    if (el.mapModeChip && el.hudTc) el.hudTc.appendChild(el.mapModeChip);
+    if (el.mapTargetBlock && el.hudTc) el.hudTc.appendChild(el.mapTargetBlock);
     if (el.runDock && el.hudBr) el.hudBr.appendChild(el.runDock);
+  } else if (isHome && el.homeToolbar && el.filterWrap) {
+    el.homeToolbar.appendChild(el.filterWrap);
   } else if (el.controls) {
     if (el.filterWrap) el.controls.appendChild(el.filterWrap);
     if (el.runDock) el.controls.appendChild(el.runDock);
@@ -111,7 +267,7 @@ export function renderMapPrompt(state) {
   if (run && run.finished && !state.map.explore) {
     el.mapTargetFlag.textContent = "🏁";
     el.mapTargetName.textContent = "Set complete";
-    el.mapTargetRegion.textContent = `${run.correct} / ${state.selectedNames.size}`;
+    el.mapTargetRegion.textContent = `${run.correct} / ${poolSize(run, state.selectedNames)}`;
     el.mapTargetRegion.classList.remove("hidden");
     applyRegionTheme(null);
     return;
@@ -122,7 +278,7 @@ export function renderMapPrompt(state) {
   el.mapTargetFlag.textContent = target.flag;
   el.mapTargetName.textContent = target.name;
   el.mapTargetRegion.textContent = target.region;
-  const showHint = state.settings.showContinentHint || state.map.explore;
+  const showHint = modeSettings(state).showContinentHint || state.map.explore;
   el.mapTargetRegion.classList.toggle("hidden", !showHint);
   applyRegionTheme(state.focusName || target.name);
 }
@@ -141,10 +297,21 @@ function formatGap(km) {
   return `${Math.round(km)} km apart at the closest points`;
 }
 
+function lostFireHtml(award) {
+  if (!award || award.hit || !award.lostBonus) return "";
+  const title = award.lostStreak >= 5 ? "FIRE OUT" : "Streak broken";
+  return `<br><span class="streak-hit is-lost">${title} −${award.lostBonus}</span>`;
+}
+
 export function renderMapResult(result) {
+  const lost = lostFireHtml(result.award);
   if (result.isCorrect) {
+    const bonus = result.award && result.award.bonus;
+    const extra = bonus
+      ? `<br><span class="streak-hit">${result.award.streak >= 5 ? "ON FIRE" : result.award.streak >= 3 ? "HOT STREAK" : "Streak"} +${bonus}</span>`
+      : "";
     setMapFeedback(
-      `Correct! That's <strong>${result.target.name}</strong> 🎯`,
+      `Correct! That's <strong>${result.target.name}</strong> 🎯${extra}`,
       "var(--success)"
     );
     return;
@@ -153,7 +320,7 @@ export function renderMapResult(result) {
   if (result.kind === "miss") {
     setMapFeedback(
       `Missed the land!<br>
-    It was <strong>${result.target.name}</strong> · ${formatGap(result.distanceKm)}`,
+    It was <strong>${result.target.name}</strong> · ${formatGap(result.distanceKm)}${lost}`,
       "var(--error)"
     );
     return;
@@ -163,7 +330,7 @@ export function renderMapResult(result) {
     setMapFeedback(
       `Same region, wrong country!<br>
         You clicked <strong>${result.guessedName}</strong> — it was <strong>${result.target.name}</strong><br>
-        <span style="font-size:0.95rem;opacity:0.9">${formatGap(result.distanceKm)} · both in ${result.target.region}</span>`,
+        <span style="font-size:0.95rem;opacity:0.9">${formatGap(result.distanceKm)} · both in ${result.target.region}</span>${lost}`,
       "#fbbf24"
     );
     return;
@@ -171,7 +338,7 @@ export function renderMapResult(result) {
 
   setMapFeedback(
     `You clicked <strong>${result.guessedName}</strong> — it was <strong>${result.target.name}</strong><br>
-        <span style="font-size:0.95rem;opacity:0.9">${formatGap(result.distanceKm)}</span>`,
+        <span style="font-size:0.95rem;opacity:0.9">${formatGap(result.distanceKm)}</span>${lost}`,
     "var(--error)"
   );
 }

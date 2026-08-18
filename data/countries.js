@@ -1,4 +1,4 @@
-// Country data for Country Learner
+// Country data for Nation Nexus
 // name, capital, flag emoji, region, lat/lng of capital
 
 export const countries = [

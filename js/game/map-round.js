@@ -1,6 +1,7 @@
 import { awardCorrect, awardWrong, currentRun, emptyMapRound } from "./state.js";
-import { filterPool, findByGeoName } from "./catalog.js";
-import { dealNext, touchStart } from "./run.js";
+import { findByGeoName } from "./catalog.js";
+import { dealNext, dealPool, recordTurn, touchStart } from "./run.js";
+import { modeSettings } from "./settings.js";
 import { measureBetweenCountries, measureToCountry } from "./borders.js";
 
 function clickPoint(clickLatLng, guessed, target) {
@@ -23,20 +24,33 @@ function finishGuess(state, result) {
   state.map.waiting = false;
   state.map.lastResult = result;
 
-  if (result.isCorrect) awardCorrect(state, result.target.name);
-  else awardWrong(state, result.target.name);
+  result.award = result.isCorrect
+    ? awardCorrect(state, result.target.name)
+    : awardWrong(state, result.target.name);
+
+  const run = currentRun(state);
+  if (run && result.target) {
+    recordTurn(run, {
+      name: result.target.name,
+      correct: !!result.isCorrect,
+      guess: result.guessedName || null,
+      answer: result.target.name,
+      points: result.award ? result.award.points : 0,
+      streak: result.award ? result.award.streak : run.streak,
+    });
+  }
 
   return result;
 }
 
 export function startMapRound(state, countries) {
   const explore = state.map.explore;
-  const pool = filterPool(state, countries);
+  const run = currentRun(state);
+  const pool = dealPool(countries, run, state.selectedNames);
   state.map = { ...emptyMapRound(), explore };
   if (!pool.length || explore) return;
-  const run = currentRun(state);
   if (!run) return;
-  state.map.target = dealNext(pool, run, state.settings.repeatPolicy);
+  state.map.target = dealNext(pool, run, modeSettings(state).repeatPolicy);
   if (!state.map.target) state.map.waiting = false;
   else touchStart(run);
 }

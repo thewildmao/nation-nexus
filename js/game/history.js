@@ -1,9 +1,9 @@
 import { summarizeSelection } from "./regions.js";
-import { elapsedMs, PLAYABLE_MODES, runHasProgress } from "./run.js";
+import { elapsedMs, PLAYABLE_MODES, poolSize, runHasProgress } from "./run.js";
+import { modeSettings } from "./settings.js";
 
 const SCORE_PREFIX = "countryLearner.scores.";
 const OLD_PREFIX = "countryLearner.history.";
-const TOP = 10;
 
 function emptyScores() {
   return { totals: { points: 0, games: 0 }, bySize: {} };
@@ -53,7 +53,7 @@ function migrate(mode) {
       data.totals.points += row.points || 0;
       data.totals.games += 1;
       const size = String(row.total || 0);
-      data.bySize[size] = sortBucket([...(data.bySize[size] || []), row]).slice(0, TOP);
+      data.bySize[size] = sortBucket([...(data.bySize[size] || []), row]);
     });
     saveScores(mode, data);
   } catch {
@@ -74,10 +74,8 @@ export function poolSizes(mode) {
 
 export function topScores(mode, size) {
   const data = loadScores(mode);
-  if (size) {
-    return sortBucket(data.bySize[String(size)] || []).slice(0, TOP);
-  }
-  return sortBucket(Object.values(data.bySize).flat()).slice(0, TOP);
+  if (size) return sortBucket(data.bySize[String(size)] || []);
+  return sortBucket(Object.values(data.bySize).flat());
 }
 
 export function latestScore(mode) {
@@ -85,6 +83,14 @@ export function latestScore(mode) {
     .flat()
     .sort((a, b) => (b.at || 0) - (a.at || 0));
   return all[0] || null;
+}
+
+export function scoreByAt(mode, at) {
+  const stamp = Number(at);
+  if (!mode || !stamp) return null;
+  return Object.values(loadScores(mode).bySize)
+    .flat()
+    .find((row) => row.at === stamp) || null;
 }
 
 export function loadHistory(mode) {
@@ -95,22 +101,40 @@ export function loadHistory(mode) {
 export function snapshotRun(state, mode, extra = {}) {
   const run = state.runs[mode];
   if (!run || !runHasProgress(run)) return null;
+  const cfg = modeSettings(state, mode);
   return {
     at: Date.now(),
     points: run.points || 0,
     correct: run.correct,
     asked: run.asked.size,
-    total: state.selectedNames.size,
+    total: poolSize(run, state.selectedNames),
     bestStreak: run.bestStreak || 0,
     regionLabel: summarizeSelection(state.selectedNames),
-    answerStyle: mode === "map" ? "map" : state.settings.answerStyle,
-    repeatPolicy: state.settings.repeatPolicy,
+    answerStyle: mode === "map" ? (cfg.showContinentHint ? "map-hint" : "map") : cfg.answerStyle,
+    hint: mode === "map" ? !!cfg.showContinentHint : false,
+    repeatPolicy: cfg.repeatPolicy,
     finished: !!run.finished,
     elapsedMs: elapsedMs(run),
     ended: extra.ended || (run.finished ? "finished" : "exited"),
     mode,
     ...extra,
+    misses: Array.from(run.misses || []),
+    turns: snapshotTurns(run.turns),
+    replay: !!(run.poolNames && run.poolNames.size),
   };
+}
+
+function snapshotTurns(turns) {
+  if (!Array.isArray(turns)) return [];
+  return turns.map((turn, i) => ({
+    n: Number(turn.n) || i + 1,
+    name: typeof turn.name === "string" ? turn.name : "",
+    correct: !!turn.correct,
+    guess: typeof turn.guess === "string" && turn.guess ? turn.guess : null,
+    answer: typeof turn.answer === "string" && turn.answer ? turn.answer : null,
+    points: Number(turn.points) || 0,
+    streak: Number(turn.streak) || 0,
+  })).filter((turn) => turn.name);
 }
 
 export function archiveRun(state, mode, extra) {
@@ -120,7 +144,11 @@ export function archiveRun(state, mode, extra) {
   data.totals.points += snap.points || 0;
   data.totals.games += 1;
   const size = String(snap.total || 0);
-  data.bySize[size] = sortBucket([snap, ...(data.bySize[size] || [])]).slice(0, TOP);
+  const prev = data.bySize[size] || [];
+  data.bySize[size] = sortBucket([
+    snap,
+    ...prev.filter((row) => row.at !== snap.at),
+  ]);
   saveScores(mode, data);
   return snap;
 }

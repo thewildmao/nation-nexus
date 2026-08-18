@@ -1,43 +1,56 @@
-import { summarizeSelection } from "../game/regions.js";
-import { runHasProgress } from "../game/run.js";
+import { elapsedMs, formatElapsed, poolSize, runHasProgress } from "../game/run.js";
 
-const TITLES = {
-  map: "Where is it?",
-  flags: "Which flag?",
-  capitals: "What capital?",
-  study: "Study",
-  scoreboard: "Scoreboard",
-  breakdown: "Breakdown",
-  home: "Guess the country",
-};
+export { pageTitle, playTitle } from "./identity.js";
 
-export function playTitle(mode) {
-  return TITLES[mode] || "Guess the country";
-}
-
-export function pageTitle(mode, boardMode) {
-  if (mode === "home") return "Country Learner";
-  if (mode === "scoreboard" && boardMode) {
-    return `${playTitle(boardMode)} scores · Country Learner`;
-  }
-  if (mode === "breakdown" && boardMode) {
-    return `${playTitle(boardMode)} recap · Country Learner`;
-  }
-  return `${playTitle(mode)} · Country Learner`;
+function setHidden(node, hide) {
+  if (node) node.classList.toggle("hidden", hide);
 }
 
 export function renderHome(state) {
-  const region = summarizeSelection(state.selectedNames);
-  document.querySelectorAll("[data-status]").forEach((node) => {
-    const run = state.runs[node.dataset.status];
-    if (!run || !runHasProgress(run)) {
-      node.textContent = "New game";
-      return;
+  document.querySelectorAll("[data-card]").forEach((wrap) => {
+    const mode = wrap.dataset.card;
+    const run = state.runs[mode];
+    const total = poolSize(run, state.selectedNames);
+    const live = !!(run && runHasProgress(run) && !run.finished);
+    const done = !!(run && runHasProgress(run) && run.finished);
+    const status = wrap.querySelector("[data-status]");
+    const badge = wrap.querySelector("[data-badge]");
+    const meta = wrap.querySelector("[data-meta]");
+    const progress = wrap.querySelector("[data-progress]");
+    const count = wrap.querySelector("[data-count]");
+    const bar = wrap.querySelector(".game-card-bar > span");
+
+    wrap.classList.toggle("is-live", live);
+    wrap.classList.toggle("is-done", done);
+
+    if (status) {
+      status.textContent = live ? "Continue" : done ? "Play again" : "Play";
     }
-    if (run.finished) {
-      node.textContent = `Last set ${run.points} pts · ${run.correct}/${state.selectedNames.size} · ${region}`;
-      return;
+
+    if (badge) {
+      badge.textContent = live ? "In progress" : "Set complete";
+      setHidden(badge, !live && !done);
     }
-    node.textContent = `${run.points} pts · ${run.asked.size}/${state.selectedNames.size} · ${region}`;
+
+    const asked = run ? run.asked.size : 0;
+    const showBar = live && asked > 0 && total > 0;
+    setHidden(progress, !showBar);
+    if (showBar) {
+      const pct = Math.max(0, Math.min(100, Math.round((asked / total) * 100)));
+      if (bar) bar.style.width = `${pct}%`;
+      if (count) count.textContent = `${asked}/${total}`;
+    }
+
+    if (meta) {
+      if (live || done) {
+        const parts = [`${run.points || 0} pts`];
+        if (run.startedAt || run.elapsedMs) parts.push(formatElapsed(elapsedMs(run)));
+        meta.textContent = parts.join(" · ");
+        setHidden(meta, false);
+      } else {
+        meta.textContent = "";
+        setHidden(meta, true);
+      }
+    }
   });
 }

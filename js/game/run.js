@@ -17,7 +17,42 @@ export function emptyRun() {
     startedAt: null,
     elapsedMs: 0,
     runningSince: null,
+    // Replay-only. Do not copy selectedNames here — that pool is shared.
+    poolNames: null,
+    turns: [],
   };
+}
+
+export function recordTurn(run, turn) {
+  if (!run) return;
+  if (!Array.isArray(run.turns)) run.turns = [];
+  const name = typeof turn.name === "string" ? turn.name : "";
+  if (!name) return;
+  run.turns.push({
+    n: run.turns.length + 1,
+    name,
+    correct: !!turn.correct,
+    guess: typeof turn.guess === "string" && turn.guess ? turn.guess : null,
+    answer: typeof turn.answer === "string" && turn.answer ? turn.answer : null,
+    points: Number(turn.points) || 0,
+    streak: Number(turn.streak) || 0,
+  });
+}
+
+export function runPoolNames(run, selectedNames) {
+  if (run && run.poolNames && run.poolNames.size) return run.poolNames;
+  return selectedNames;
+}
+
+export function poolSize(run, selectedNames) {
+  const names = runPoolNames(run, selectedNames);
+  return names ? names.size : 0;
+}
+
+export function dealPool(list, run, selectedNames) {
+  const names = runPoolNames(run, selectedNames);
+  if (!names) return list;
+  return list.filter((country) => names.has(country.name));
 }
 
 export function elapsedMs(run) {
@@ -102,10 +137,8 @@ export function markAsked(run, name, correct, policy) {
 
   if (policy !== "random") run.asked.add(name);
 
-  if (policy === "misses") {
-    if (correct) run.misses.delete(name);
-    else run.misses.add(name);
-  }
+  if (!correct) run.misses.add(name);
+  else if (policy === "misses") run.misses.delete(name);
 
   if (correct) {
     run.correct += 1;
@@ -120,6 +153,7 @@ export function continueLap(run) {
   if (!run) return;
   run.asked = new Set();
   run.misses = new Set();
+  run.turns = [];
   run.cycle += 1;
   run.finished = false;
   run.lastName = null;
@@ -128,10 +162,35 @@ export function continueLap(run) {
   run.runningSince = Date.now();
 }
 
+export const BASE_POINTS = 100;
+export const TYPE_POINTS = 200;
+export const MISS_BONUS = 50;
+export const HINT_PENALTY = 0.2;
+export const STREAK_STEP = 20;
+export const STREAK_MAX_BONUS = 80;
+
+export function streakBonus(streak) {
+  if (streak < 2) return 0;
+  return Math.min(STREAK_MAX_BONUS, (streak - 1) * STREAK_STEP);
+}
+
+export function baseAward(mode, cfg = {}) {
+  if (mode !== "map" && cfg.answerStyle === "type") return TYPE_POINTS;
+  return BASE_POINTS;
+}
+
+export function hintedAward(points) {
+  return Math.round(points * (1 - HINT_PENALTY));
+}
+
 export function pointsForCorrect(state, name) {
   const run = state.runs[state.mode];
-  const typed = state.mode !== "map" && state.settings.answerStyle === "type";
-  const clearingMiss =
-    state.settings.repeatPolicy === "misses" && run && run.misses.has(name);
-  return (typed ? 200 : 100) + (clearingMiss ? 50 : 0);
+  const cfg = (state.settings && state.settings[state.mode]) || {};
+  let points = baseAward(state.mode, cfg);
+  if (state.mode === "map" && cfg.showContinentHint) points = hintedAward(points);
+  const upcoming = run ? run.streak + 1 : 1;
+  points += streakBonus(upcoming);
+  const clearingMiss = cfg.repeatPolicy === "misses" && run && run.misses.has(name);
+  if (clearingMiss) points += MISS_BONUS;
+  return points;
 }

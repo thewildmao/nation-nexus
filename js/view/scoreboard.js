@@ -1,7 +1,7 @@
 import { careerTotals, poolSizes, topScores } from "../game/history.js";
 import { summarizeSelection } from "../game/regions.js";
 import { formatElapsed, PLAYABLE_MODES, runHasProgress } from "../game/run.js";
-import { playTitle } from "./home.js";
+import { playTitle } from "./identity.js";
 
 const BLURB = {
   map: "Find the country on the map",
@@ -11,9 +11,10 @@ const BLURB = {
 
 const filterByMode = new Map();
 
-function styleLabel(style) {
-  if (style === "type") return "Type-in";
-  if (style === "map") return "Map";
+function styleLabel(row) {
+  if (row.hint || row.answerStyle === "map-hint") return "Map · hint";
+  if (row.answerStyle === "type") return "Type-in";
+  if (row.answerStyle === "map") return "Map";
   return "Choices";
 }
 
@@ -45,10 +46,17 @@ function renderPicker(root) {
     const card = document.createElement("a");
     card.className = "scoreboard-card scoreboard-pick";
     card.href = `#/scoreboard/${mode}`;
-    card.innerHTML = `<span class="game-card-kicker">Scoreboard</span>
-      <h2>${playTitle(mode)}</h2>
-      <p>${BLURB[mode]}</p>
-      <span class="game-card-status">${totals.points} total pts · ${totals.games} games</span>`;
+    const kicker = document.createElement("span");
+    kicker.className = "game-card-kicker";
+    kicker.textContent = "Scoreboard";
+    const title = document.createElement("h2");
+    title.textContent = playTitle(mode);
+    const blurb = document.createElement("p");
+    blurb.textContent = BLURB[mode];
+    const status = document.createElement("span");
+    status.className = "game-card-status";
+    status.textContent = `${totals.points} total pts · ${totals.games} games`;
+    card.append(kicker, title, blurb, status);
     root.append(card);
   });
 }
@@ -128,11 +136,26 @@ function renderGameBoard(root, state, mode) {
   if (!rows.length) {
     const empty = document.createElement("tr");
     empty.className = "is-empty";
-    empty.innerHTML = `<td colspan="${showSizeCol ? 8 : 7}">No top scores yet for this filter. Finish a run to land here.</td>`;
+    empty.innerHTML = `<td colspan="${showSizeCol ? 8 : 7}">No games yet for this filter. Finish a run to land here.</td>`;
     body.append(empty);
   } else {
     rows.forEach((row, i) => {
       const tr = document.createElement("tr");
+      if (row.at) {
+        tr.className = "board-row-link" + (row.replay ? " is-replay" : "");
+        tr.tabIndex = 0;
+        tr.title = "Open recap";
+        const open = () => {
+          window.location.hash = `#/breakdown/${mode}/${row.at}`;
+        };
+        tr.addEventListener("click", open);
+        tr.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            open();
+          }
+        });
+      }
       tr.innerHTML = `
         <td class="num">${i + 1}</td>
         <td class="num">${row.points ?? 0}</td>
@@ -140,8 +163,10 @@ function renderGameBoard(root, state, mode) {
         ${showSizeCol ? `<td class="num">${row.total ?? "—"}</td>` : ""}
         <td class="num">${escapeHtml(formatElapsed(row.elapsedMs))}</td>
         <td>${escapeHtml(formatWhen(row.at))}</td>
-        <td>${escapeHtml(row.regionLabel || "—")}</td>
-        <td>${escapeHtml(styleLabel(row.answerStyle))}</td>`;
+        <td>${row.replay
+          ? `<span class="board-replay">Replay</span>${row.regionLabel ? ` ${escapeHtml(row.regionLabel)}` : ""}`
+          : escapeHtml(row.regionLabel || "—")}</td>
+        <td>${escapeHtml(styleLabel(row))}</td>`;
       body.append(tr);
     });
   }

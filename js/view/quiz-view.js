@@ -6,6 +6,7 @@ import {
   suggestAnswers,
 } from "../game/quiz.js";
 import { currentRun } from "../game/state.js";
+import { poolSize } from "../game/run.js";
 import { el } from "./dom.js";
 
 function hideType() {
@@ -29,7 +30,12 @@ function bindOptions(state, onSelect) {
     const btn = document.createElement("button");
     btn.className = "option-btn";
     btn.dataset.index = String(i);
-    btn.textContent = optionLabel(state, opt);
+    const label = document.createElement("span");
+    label.textContent = optionLabel(state, opt);
+    const key = document.createElement("kbd");
+    key.className = "option-key";
+    key.textContent = String(i + 1);
+    btn.append(label, key);
 
     if (state.quiz.answered) {
       btn.disabled = true;
@@ -98,16 +104,26 @@ function bindType(state, pool) {
 }
 
 function renderPrompt(state) {
-  if (state.mode === "flags") {
-    el.questionText.textContent = "Which country is this?";
-    el.promptDisplay.className = "flag-display";
-    el.promptDisplay.textContent = state.quiz.country.flag;
-    return;
-  }
+  const isFlags = state.mode === "flags";
+  const nextClass = isFlags ? "flag-display" : "country-name-display";
+  const nextText = isFlags
+    ? state.quiz.country.flag
+    : `${state.quiz.country.flag} ${state.quiz.country.name}`;
 
-  el.questionText.textContent = "What is the capital of this country?";
-  el.promptDisplay.className = "country-name-display";
-  el.promptDisplay.textContent = `${state.quiz.country.flag} ${state.quiz.country.name}`;
+  el.questionText.textContent = isFlags
+    ? "Which country is this?"
+    : "What is the capital of this country?";
+
+  const changed =
+    el.promptDisplay.textContent !== nextText ||
+    !el.promptDisplay.classList.contains(nextClass);
+
+  el.promptDisplay.className = nextClass;
+  el.promptDisplay.textContent = nextText;
+  if (!changed) return;
+  el.promptDisplay.classList.remove("is-enter");
+  void el.promptDisplay.offsetWidth;
+  el.promptDisplay.classList.add("is-enter");
 }
 
 function renderFeedback(state) {
@@ -123,9 +139,13 @@ function renderFeedback(state) {
 
   const run = currentRun(state);
   if (state.quiz.correct) {
+    const award = run && run.lastAward;
+    const extra = award && award.bonus
+      ? ` ${award.streak >= 5 ? "ON FIRE" : award.streak >= 3 ? "HOT STREAK" : "Streak"} +${award.bonus}`
+      : "";
     el.feedback.textContent = run && run.finished
-      ? `Correct! Set complete — ${run.points} pts · ${run.correct}/${state.selectedNames.size}`
-      : "Correct! 🎉";
+      ? `Correct! Set complete — ${run.points} pts · ${run.correct}/${poolSize(run, state.selectedNames)}`
+      : `Correct! 🎉${extra}`;
     el.feedback.classList.add("correct");
     return;
   }
@@ -135,10 +155,15 @@ function renderFeedback(state) {
     state.mode === "flags"
       ? `Wrong — it was ${state.quiz.country.name}`
       : `Wrong — the capital is ${state.quiz.country.capital}`;
+  const award = run && run.lastAward;
+  const lost =
+    award && !award.hit && award.lostBonus
+      ? ` ${award.lostStreak >= 5 ? "FIRE OUT" : "Streak broken"} −${award.lostBonus}`
+      : "";
   el.feedback.textContent =
     run && run.finished
-      ? `${missed}. Set complete — ${run.points} pts · ${run.correct}/${state.selectedNames.size}`
-      : missed;
+      ? `${missed}. Set complete — ${run.points} pts · ${run.correct}/${poolSize(run, state.selectedNames)}`
+      : `${missed}${lost}`;
 }
 
 export function renderQuiz(state, onSelect, pool) {
@@ -147,7 +172,7 @@ export function renderQuiz(state, onSelect, pool) {
     el.questionText.textContent = "Set complete";
     el.promptDisplay.className = "country-name-display";
     el.promptDisplay.textContent = run
-      ? `${run.points} pts · ${run.correct} / ${state.selectedNames.size}`
+      ? `${run.points} pts · ${run.correct} / ${poolSize(run, state.selectedNames)}`
       : "";
     el.options.innerHTML = "";
     el.options.classList.add("hidden");
@@ -182,6 +207,54 @@ export function renderQuiz(state, onSelect, pool) {
   bindOptions(state, onSelect);
   bindType(state, pool || []);
   renderFeedback(state);
+}
+
+function overlayOpen() {
+  return !!(
+    (el.settingsWrap && el.settingsWrap.classList.contains("is-open")) ||
+    (el.confirmWrap && el.confirmWrap.classList.contains("is-open"))
+  );
+}
+
+function optionIndex(e) {
+  if (e.code === "Digit1" || e.code === "Numpad1") return 0;
+  if (e.code === "Digit2" || e.code === "Numpad2") return 1;
+  if (e.code === "Digit3" || e.code === "Numpad3") return 2;
+  if (e.code === "Digit4" || e.code === "Numpad4") return 3;
+  return -1;
+}
+
+export function bindQuizKeys(state, onSelect, onNext) {
+  document.addEventListener("keydown", (e) => {
+    if (e.repeat || e.metaKey || e.ctrlKey || e.altKey) return;
+    if (overlayOpen()) return;
+    const playing = state.mode === "flags" || state.mode === "capitals";
+    const onMap = state.mode === "map";
+    if (!playing && !onMap) return;
+    if (playing && el.quizArea && el.quizArea.classList.contains("hidden")) return;
+
+    const typing =
+      e.target &&
+      (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA");
+
+    if (e.key === "Enter") {
+      if (playing && typing && isTypeIn(state) && !state.quiz.answered) return;
+      if (playing && el.nextBtn && !el.nextBtn.classList.contains("hidden")) {
+        e.preventDefault();
+        onNext();
+      } else if (onMap && el.newMapTarget && !state.map.waiting && !state.map.explore) {
+        e.preventDefault();
+        el.newMapTarget.click();
+      }
+      return;
+    }
+
+    if (!playing || typing || isTypeIn(state) || state.quiz.answered) return;
+    const index = optionIndex(e);
+    if (index < 0 || !state.quiz.options || index >= state.quiz.options.length) return;
+    e.preventDefault();
+    onSelect(index);
+  });
 }
 
 export function bindAnswerMode(onStyle) {

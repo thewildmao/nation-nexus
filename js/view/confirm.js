@@ -3,14 +3,25 @@ import { notifyClock } from "./timer.js";
 
 let pending = null;
 
+function motionMs() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200;
+}
+
 function finish(ok) {
   if (!pending) return;
   const resolve = pending;
   pending = null;
   if (el.confirmWrap) {
-    el.confirmWrap.hidden = true;
     el.confirmWrap.classList.remove("is-open");
-    el.confirmWrap.style.display = "none";
+    el.confirmWrap.classList.add("is-leaving");
+    const hide = () => {
+      if (!el.confirmWrap || el.confirmWrap.classList.contains("is-open")) return;
+      el.confirmWrap.classList.remove("is-leaving");
+      el.confirmWrap.hidden = true;
+      el.confirmWrap.style.display = "none";
+    };
+    if (motionMs() === 0) hide();
+    else window.setTimeout(hide, motionMs());
   }
   resolve(ok);
   notifyClock();
@@ -34,10 +45,11 @@ export function confirmWarn({
   if (el.confirmCancel) el.confirmCancel.textContent = cancelLabel;
 
   document.body.appendChild(el.confirmWrap);
+  el.confirmWrap.classList.remove("is-leaving");
   el.confirmWrap.hidden = false;
   el.confirmWrap.classList.add("is-open");
   el.confirmWrap.style.cssText =
-    "position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:24px;";
+    "position:fixed;inset:0;z-index:2147483001;display:flex;align-items:center;justify-content:center;padding:24px;";
 
   queueMicrotask(() => {
     if (el.confirmCancel) el.confirmCancel.focus();

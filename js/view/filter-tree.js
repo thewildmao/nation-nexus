@@ -17,6 +17,10 @@ let dirty = false;
 let snapshot = null;
 let onApply = () => {};
 
+function motionMs() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200;
+}
+
 function expandableIds(nodes, out = []) {
   nodes.forEach((node) => {
     if (node.country) return;
@@ -52,7 +56,7 @@ function updateLabel(state) {
   const { selected, total } = counts(state);
   el.filterToggle.textContent = `${summarizeSelection(state.selectedNames)} · ${selected}/${total} ▾`;
   if (el.filterPopTitle) {
-    el.filterPopTitle.textContent = `${selected} / ${total} countries`;
+    el.filterPopTitle.textContent = `${selected} / ${total}`;
   }
 }
 
@@ -179,11 +183,24 @@ function restoreSnapshot(state) {
   render(state);
 }
 
+function hideLayer() {
+  if (!el.filterLayer || el.filterLayer.classList.contains("is-open")) return;
+  el.filterLayer.classList.remove("is-leaving");
+  el.filterLayer.hidden = true;
+  el.filterLayer.style.display = "none";
+}
+
 function close(state) {
   if (!open) return;
   open = false;
-  el.filterPop.classList.remove("is-open");
+  if (el.filterPop) el.filterPop.classList.remove("is-open");
+  if (el.filterLayer) {
+    el.filterLayer.classList.remove("is-open");
+    el.filterLayer.classList.add("is-leaving");
+  }
   el.filterToggle.setAttribute("aria-expanded", "false");
+  if (motionMs() === 0) hideLayer();
+  else window.setTimeout(hideLayer, motionMs());
   notifyClock();
   if (dirty) {
     dirty = false;
@@ -199,7 +216,15 @@ function close(state) {
 function openPop(state) {
   open = true;
   snapshot = new Set(state.selectedNames);
-  el.filterPop.classList.add("is-open");
+  if (el.filterLayer) {
+    document.body.appendChild(el.filterLayer);
+    el.filterLayer.classList.remove("is-leaving");
+    el.filterLayer.hidden = false;
+    el.filterLayer.classList.add("is-open");
+    el.filterLayer.style.cssText =
+      "position:fixed;inset:0;z-index:2147482990;display:flex;align-items:center;justify-content:center;padding:24px;";
+  }
+  if (el.filterPop) el.filterPop.classList.add("is-open");
   el.filterToggle.setAttribute("aria-expanded", "true");
   render(state);
   notifyClock();
@@ -248,15 +273,34 @@ export function bindFilterTree(state, apply) {
     render(state);
   });
 
-  el.filterPop.addEventListener("click", (e) => e.stopPropagation());
+  if (el.filterLayer) {
+    el.filterLayer.addEventListener("pointerdown", (e) => e.stopPropagation());
+    el.filterLayer.addEventListener("click", (e) => e.stopPropagation());
+  }
+  if (el.filterPop) {
+    el.filterPop.addEventListener("pointerdown", (e) => e.stopPropagation());
+    el.filterPop.addEventListener("click", (e) => e.stopPropagation());
+  }
+  if (el.filterBackdrop) {
+    el.filterBackdrop.addEventListener("pointerdown", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+    el.filterBackdrop.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      close(state);
+    });
+  }
+  if (el.filterDone) {
+    el.filterDone.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      close(state);
+    });
+  }
 
-  document.addEventListener("pointerdown", (e) => {
-    if (!open) return;
-    const wrap = el.filterToggle.closest(".filter-wrap");
-    if (wrap && wrap.contains(e.target)) return;
-    close(state);
-  });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape") close(state);
+    if (e.key === "Escape" && isOpen()) close(state);
   });
 }

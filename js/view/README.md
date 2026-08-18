@@ -7,6 +7,7 @@ Everything the browser sees. Game files never import from here.
 | `dom.js` | Element lookups |
 | `nav.js` | Hash routes for home and each minigame |
 | `home.js` | Home cards and page titles |
+| `guide.js` | How-to-play page generated from score-copy |
 | `scoreboard.js` | Per-game scoreboard and last 10 runs |
 | `breakdown.js` | End-of-game recap with time |
 | `timer.js` | Live play clock and pause/resume |
@@ -16,4 +17,5 @@ Everything the browser sees. Game files never import from here.
 | `confirm.js` | Centered frosted warning dialog |
 | `map-view.js` | Leaflet map, colors, labels, guess overlays |
 | `quiz-view.js` | Flag / capital buttons |
-| `study-view.js` | Study grid |
+| `study-view.js` | Study grid and country info page |
+| `country-map.js` | Leaflet map on the country info page |

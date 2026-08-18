@@ -14,7 +14,7 @@ function overlaysOpen() {
   return !!(
     (el.settingsWrap && el.settingsWrap.classList.contains("is-open")) ||
     (el.confirmWrap && el.confirmWrap.classList.contains("is-open")) ||
-    (el.filterPop && el.filterPop.classList.contains("is-open"))
+    (el.filterLayer && el.filterLayer.classList.contains("is-open"))
   );
 }
 

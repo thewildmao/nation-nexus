@@ -3,15 +3,17 @@ import { countries } from "../data/countries.js";
 import { filterPool, findByGeoName } from "./game/catalog.js";
 import { resolveCountryGuess, resolveMiss, startMapRound, toggleExplore } from "./game/map-round.js";
 import { gradeQuizAnswer, startQuizRound } from "./game/quiz.js";
+import { scoreByAt } from "./game/history.js";
 import { anyRunHasProgress, continueLap, PLAYABLE_MODES, runHasProgress } from "./game/run.js";
-import { createState, currentRun, endRun, MODES, resetAllRuns, resetRun } from "./game/state.js";
+import { beginReplay, createState, currentRun, endRun, MODES, resetAllRuns, resetRun } from "./game/state.js";
 import { bindConfirm, confirmWarn } from "./view/confirm.js";
 import { bindFilterTree } from "./view/filter-tree.js";
+import { renderGuide } from "./view/guide.js";
 import { renderHome } from "./view/home.js";
 import { renderBreakdown } from "./view/breakdown.js";
 import { renderScoreboard } from "./view/scoreboard.js";
 import { bindHash, readHash, setHash } from "./view/nav.js";
-import { bindSettings } from "./view/settings.js";
+import { bindSettings, syncSettingsForm } from "./view/settings.js";
 import { bindTimer, syncPlayClock } from "./view/timer.js";
 import { el } from "./view/dom.js";
 import {
@@ -25,8 +27,8 @@ import {
   showScreen,
 } from "./view/hud.js";
 import * as mapView from "./view/map-view.js";
-import { saveSettings } from "./game/settings.js";
-import { bindAnswerMode, bindTypeInput, renderQuiz } from "./view/quiz-view.js";
+import { modeSettings, saveSettings } from "./game/settings.js";
+import { bindAnswerMode, bindQuizKeys, bindTypeInput, renderQuiz } from "./view/quiz-view.js";
 import { renderStudy } from "./view/study-view.js";
 
 const state = createState();
@@ -60,7 +62,7 @@ function paintQuiz() {
 function startQuiz() {
   const run = currentRun(state);
   if (run && run.finished) {
-    if (state.settings.repeatPolicy === "cycle") continueLap(run);
+    if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
     else resetRun(state, state.mode);
   }
   startQuizRound(state, countries);
@@ -69,31 +71,54 @@ function startQuiz() {
   syncPlayClock(state);
 }
 
-function applyAnswerStyle(style) {
-  const alreadyOn =
-    state.settings.answerStyle === style && state.quiz.answerStyle === style;
-  state.settings.answerStyle = style;
-  saveSettings(state.settings);
-  el.answerStyle.forEach((input) => {
-    input.checked = input.value === style;
-  });
+async function applyAnswerStyle(style) {
+  const cfg = modeSettings(state);
+  const alreadyOn = cfg.answerStyle === style && state.quiz.answerStyle === style;
   if (alreadyOn && (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS)) {
     paintQuiz();
     return;
   }
+
+  if (cfg.answerStyle !== style) {
+    const run = state.runs[state.mode];
+    if (PLAYABLE_MODES.includes(state.mode) && runHasProgress(run)) {
+      const ok = await confirmWarn({
+        title: "Change how you answer?",
+        message: "This ends your current run and saves it to the scoreboard.",
+        confirmLabel: "Change and reset",
+      });
+      if (!ok) {
+        syncSettingsForm(state);
+        return;
+      }
+      resetRun(state, state.mode);
+    }
+    cfg.answerStyle = style;
+    saveSettings(state.settings);
+    syncSettingsForm(state);
+  }
+
+  el.answerStyle.forEach((input) => {
+    input.checked = input.value === style;
+  });
   if (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS) {
-    resetAllRuns(state);
     startQuiz();
     renderScore(state);
     return;
   }
-  resetAllRuns(state);
   renderScore(state);
 }
 
 function showBreakdown(mode, ended) {
   endRun(state, mode, ended);
   setHash("breakdown", mode);
+}
+
+function replayMisses(mode, names) {
+  if (!PLAYABLE_MODES.includes(mode) || !names || !names.length) return;
+  beginReplay(state, mode, names);
+  if (readHash().mode === mode) enterMode({ mode, boardMode: null });
+  else setHash(mode);
 }
 
 async function startFreshRun() {
@@ -140,7 +165,7 @@ function paintMapChrome() {
 function startMap() {
   const run = currentRun(state);
   if (run && run.finished) {
-    if (state.settings.repeatPolicy === "cycle") continueLap(run);
+    if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
     else resetRun(state, MODES.MAP);
   }
   startMapRound(state, countries);
@@ -180,6 +205,7 @@ function submitMiss(latlng) {
 function enterMode(route) {
   const mode = typeof route === "string" ? route : route.mode;
   const boardMode = typeof route === "string" ? null : route.boardMode;
+  const recapAt = typeof route === "object" && route ? route.recapAt : null;
   state.mode = mode;
   state.boardMode = boardMode || null;
   showScreen(mode, state.boardMode);
@@ -190,13 +216,19 @@ function enterMode(route) {
     return;
   }
 
+  if (mode === MODES.HOW) {
+    renderGuide();
+    return;
+  }
+
   if (mode === MODES.SCOREBOARD) {
     renderScoreboard(state);
     return;
   }
 
   if (mode === MODES.BREAKDOWN) {
-    renderBreakdown(state);
+    if (recapAt && boardMode) state.breakdown = scoreByAt(boardMode, recapAt);
+    renderBreakdown(state, replayMisses, { fromBoard: !!recapAt });
     if (state.boardMode === MODES.MAP) {
       bindMap();
       setTimeout(() => mapView.invalidateSize(), 80);
@@ -205,7 +237,8 @@ function enterMode(route) {
   }
 
   if (mode === MODES.STUDY) {
-    renderStudy(currentPool());
+    const focusName = typeof route === "object" && route ? route.focusName : null;
+    renderStudy(currentPool(), focusName);
     renderScore(state);
     return;
   }
@@ -215,6 +248,7 @@ function enterMode(route) {
     if (el.breakdown) el.breakdown.classList.add("hidden");
     bindMap();
     renderMapMode(state);
+    setTimeout(() => mapView.invalidateSize(), 280);
     setTimeout(() => {
       mapView.invalidateSize();
       if (state.map.explore) {
@@ -234,7 +268,7 @@ function enterMode(route) {
   const run = currentRun(state);
   if (
     state.quiz.mode === state.mode &&
-    state.quiz.answerStyle === state.settings.answerStyle &&
+    state.quiz.answerStyle === modeSettings(state).answerStyle &&
     state.quiz.country &&
     !state.quiz.answered &&
     run &&
@@ -289,7 +323,7 @@ function bindInput() {
     if (anyRunHasProgress(state)) {
       const ok = await confirmWarn({
         title: "Change regions?",
-        message: "This starts a new score for Map, Flags, and Capitals. Your current runs will be saved to each game’s scoreboard.",
+        message: "This starts a new score for Nation Needle, Flag Master, and Capital Quest. Your current runs will be saved to each game’s scoreboard.",
         confirmLabel: "Change regions",
       });
       if (!ok) return false;
@@ -307,19 +341,22 @@ function bindInput() {
     renderScore(state);
   });
 
-  el.nextBtn.addEventListener("click", () => {
+  function goNextQuiz() {
     const run = currentRun(state);
     if (run && run.finished) {
-      if (state.settings.repeatPolicy === "cycle") continueLap(run);
+      if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
       else resetRun(state, state.mode);
     }
     startQuiz();
-  });
+  }
+
+  el.nextBtn.addEventListener("click", goNextQuiz);
+  bindQuizKeys(state, submitQuiz, goNextQuiz);
   el.newMapTarget.addEventListener("click", () => {
     if (state.map.explore) return;
     const run = currentRun(state);
     if (run && run.finished) {
-      if (state.settings.repeatPolicy === "cycle") continueLap(run);
+      if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
       else resetRun(state, MODES.MAP);
     }
     startMap();
@@ -346,22 +383,20 @@ function bindInput() {
     if (state.mode !== MODES.FLAGS && state.mode !== MODES.CAPITALS) return;
     applyAnswerStyle(style);
   });
-  bindSettings(state, (key) => {
+  bindSettings(state, (key, extra = {}) => {
     if (key === "answerStyle") {
-      applyAnswerStyle(state.settings.answerStyle);
+      if (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS) startQuiz();
+      renderScore(state);
       return;
     }
-    if (key === "repeatPolicy") {
-      resetAllRuns(state);
+    if (key === "repeatPolicy" && extra.reset) {
       if (state.mode === MODES.MAP) {
         if (!state.map.explore) startMap();
       } else if (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS) {
         startQuiz();
-      } else if (state.mode === MODES.HOME) {
-        renderHome(state);
-      } else if (state.mode === MODES.SCOREBOARD) {
-        renderScoreboard(state);
       }
+    } else if (key === "hint" && extra.reset && state.mode === MODES.MAP && !state.map.explore) {
+      startMap();
     }
     renderMapPrompt(state);
     renderScore(state);

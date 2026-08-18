@@ -34,6 +34,7 @@ let labelsLayer = null;
 let stylesLocked = false;
 let revealedResult = null;
 const fillByName = new Map();
+const idleStyleCache = new Map();
 let activeNames = null;
 let handlers = {
   onCountryClick: () => {},
@@ -106,19 +107,26 @@ function inPool(match) {
 
 export function setActivePool(names) {
   activeNames = names ? new Set(names) : null;
-  if (!stylesLocked) resetCountryStyles();
+  idleStyleCache.clear();
+  if (geoJsonLayer && !stylesLocked) resetCountryStyles();
 }
 
 function idleStyle(name) {
+  const key = `${activeNames ? activeNames.size : "*"}|${name}`;
+  const cached = idleStyleCache.get(key);
+  if (cached) return cached;
   const match = findByGeoName(name);
-  if (!inPool(match)) return STYLE.dim;
-  return {
-    fillColor: countryColor(name),
-    weight: match ? 3.2 : 0.6,
-    opacity: 1,
-    color: match ? REGION_THEME[match.region] || "#94a3b8" : "#1e293b",
-    fillOpacity: 0.66,
-  };
+  const next = !inPool(match)
+    ? STYLE.dim
+    : {
+        fillColor: countryColor(name),
+        weight: match ? 3.2 : 0.6,
+        opacity: 1,
+        color: match ? REGION_THEME[match.region] || "#94a3b8" : "#1e293b",
+        fillOpacity: 0.66,
+      };
+  idleStyleCache.set(key, next);
+  return next;
 }
 
 function namesAlign(match, geoName, country) {
@@ -234,77 +242,11 @@ function hoverStyle(geoName) {
   };
 }
 
-const TAP_PX = 8;
-const TAP_HOLD_MS = 20;
-
-function isPrimary(e) {
-  const ev = e.originalEvent;
-  if (!ev) return true;
-  if (typeof ev.button === "number" && ev.button !== 0) return false;
-  return true;
-}
-
-function bindTap(emitter, onTap, stop) {
-  let start = null;
-  let moved = false;
-  let fired = false;
-  let timer = 0;
-
-  function reset() {
-    start = null;
-    moved = false;
-    fired = false;
-    window.clearTimeout(timer);
-    if (map) map.off("dragstart", reset);
-  }
-
-  function fire(e) {
-    if (fired || !start) return;
-    fired = true;
-    const payload = start;
-    reset();
-    onTap(payload, e);
-  }
-
-  emitter.on("mousedown", (e) => {
-    if (stop) L.DomEvent.stopPropagation(e);
-    if (!isPrimary(e)) return;
-    start = { latlng: e.latlng, containerPoint: e.containerPoint };
-    moved = false;
-    fired = false;
-    window.clearTimeout(timer);
-    if (map) map.once("dragstart", reset);
-    timer = window.setTimeout(() => {
-      if (start && !moved) fire(e);
-    }, TAP_HOLD_MS);
-  });
-
-  emitter.on("mousemove", (e) => {
-    if (!start || moved || !e.containerPoint || !start.containerPoint) return;
-    if (e.containerPoint.distanceTo(start.containerPoint) <= TAP_PX) return;
-    moved = true;
-    window.clearTimeout(timer);
-    start = null;
-    if (map) map.off("dragstart", reset);
-  });
-
-  emitter.on("mouseup", (e) => {
-    if (!start || moved) {
-      reset();
-      return;
-    }
-    fire(e);
-  });
-}
-
 function bindCountryLayer(layer, geoName) {
   layer.on({
     mouseover: (e) => {
       if (stylesLocked) return;
       e.target.setStyle(hoverStyle(geoName));
-      if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
-        e.target.bringToFront();
-      }
     },
     mouseout: (e) => {
       if (stylesLocked) return;
@@ -320,14 +262,6 @@ function bindCountryLayer(layer, geoName) {
       if (handlers.isWaiting()) handlers.onCountryClick(geoName, e.latlng);
     },
   });
-  bindTap(
-    layer,
-    (payload, e) => {
-      if (handlers.isExplore() || !handlers.isWaiting()) return;
-      handlers.onCountryClick(geoName, payload.latlng || e.latlng);
-    },
-    true
-  );
 }
 
 const COUNTRY_OUTLINES = [
@@ -336,14 +270,20 @@ const COUNTRY_OUTLINES = [
 ];
 
 function fetchFirstJson(urls) {
-  const tryUrl = (i) =>
-    fetch(urls[i]).then((r) => {
-      if (!r.ok) throw new Error(`Outlines failed: ${r.status}`);
-      return r.json();
-    }).catch((err) => {
-      if (i + 1 < urls.length) return tryUrl(i + 1);
-      throw err;
-    });
+  const tryUrl = (i) => {
+    const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = ctrl ? window.setTimeout(() => ctrl.abort(), 8000) : 0;
+    return fetch(urls[i], ctrl ? { signal: ctrl.signal } : undefined)
+      .then((r) => {
+        if (!r.ok) throw new Error(`Outlines failed: ${r.status}`);
+        return r.json();
+      })
+      .finally(() => window.clearTimeout(timer))
+      .catch((err) => {
+        if (i + 1 < urls.length) return tryUrl(i + 1);
+        throw err;
+      });
+  };
   return tryUrl(0);
 }
 
@@ -360,8 +300,9 @@ function loadCountryPolygons() {
         },
       }).addTo(map);
       assignNeighborColors();
+      idleStyleCache.clear();
       geoJsonLayer.setStyle(featureStyle);
-      if (map) map.invalidateSize();
+      invalidateSize();
     })
     .catch((err) => {
       console.warn("Could not load country polygons:", err);
@@ -379,8 +320,10 @@ export function initMap(callbacks) {
     maxZoom: 8,
     worldCopyJump: true,
     zoomControl: false,
+    fadeAnimation: false,
   });
   L.control.zoom({ position: "bottomleft" }).addTo(map);
+  if (map.attributionControl) map.attributionControl.setPosition("bottomleft");
 
   map.createPane("mapLabels");
   map.getPane("mapLabels").style.zIndex = 650;
@@ -391,18 +334,37 @@ export function initMap(callbacks) {
       '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
     subdomains: "abcd",
     maxZoom: 19,
+    updateWhenIdle: true,
+    keepBuffer: 1,
   }).addTo(map);
+  window.addEventListener("resize", () => invalidateSize());
 
   resultLayer = L.layerGroup().addTo(map);
-  bindTap(map, (payload, e) => {
+  map.on("click", (e) => {
     if (handlers.isExplore() || !handlers.isWaiting()) return;
-    handlers.onMiss(payload.latlng || e.latlng);
+    handlers.onMiss(e.latlng);
   });
   loadCountryPolygons();
 }
 
+function unlockMapBox() {
+  if (!map) return;
+  map.getContainer().style.height = "";
+}
+
+function lockMapBox() {
+  if (!map) return;
+  const node = map.getContainer();
+  const height = node.clientHeight;
+  if (height < 32) return;
+  node.style.height = `${Math.round(height)}px`;
+}
+
 export function invalidateSize() {
-  if (map) map.invalidateSize();
+  if (!map) return;
+  unlockMapBox();
+  map.invalidateSize({ animate: false, pan: false });
+  lockMapBox();
 }
 
 export function resetCamera() {

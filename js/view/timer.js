@@ -34,7 +34,8 @@ export function paintTimer(state) {
   const run = PLAYABLE_MODES.includes(state.mode) ? state.runs[state.mode] : null;
   const show = !!(run && (run.startedAt || run.elapsedMs));
   if (el.timerStat) el.timerStat.classList.toggle("hidden", !show);
-  el.timer.textContent = show ? formatElapsed(elapsedMs(run)) : "0:00";
+  const next = show ? formatElapsed(elapsedMs(run)) : "0:00";
+  if (el.timer.textContent !== next) el.timer.textContent = next;
 }
 
 export function syncPlayClock(state) {

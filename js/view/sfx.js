@@ -237,6 +237,11 @@ export function applyVolume() {
 
 function dump(node) {
   try {
+    node.onended = null;
+  } catch {
+    /* not a source */
+  }
+  try {
     node.disconnect();
   } catch {
     /* already gone */
@@ -262,6 +267,7 @@ function tone({ freq, end, dur, type = "triangle", gain = 0.07, at = 0 }) {
   o.connect(g);
   g.connect(master);
   o.onended = () => {
+    o.onended = null;
     dump(o);
     dump(g);
   };
@@ -282,6 +288,7 @@ function noise({ dur, gain = 0.05, at = 0, hp = 400 }) {
   filter.connect(g);
   g.connect(master);
   src.onended = () => {
+    src.onended = null;
     dump(src);
     dump(filter);
     dump(g);
@@ -391,6 +398,7 @@ export function bindUiSfx() {
     if (!node) return;
     if (node.closest("[data-card]") || node.classList.contains("guide-play")) return;
     if (node.closest(".option-btn")) return;
+    if (node.classList.contains("settings-btn") || node.id === "settingsClose") return;
     if (node.id === "newGame" || node.id === "nextBtn" || node.id === "newMapTarget") return;
     playClick();
   });

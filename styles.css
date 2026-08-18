@@ -22,6 +22,10 @@
   padding: 0;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 body {
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background: var(--bg);
@@ -1923,6 +1927,7 @@ body.is-map .run-dock {
   font-weight: 800;
   font-size: 1.25rem;
   line-height: 1.15;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-value.is-pop {
@@ -2898,6 +2903,10 @@ body.is-combo-broke::after {
   display: none;
 }
 
+body.is-map {
+  overflow-x: hidden;
+}
+
 body.is-map footer,
 body.is-play footer {
   display: none;
@@ -3021,7 +3030,7 @@ body.is-map .controls {
 }
 
 .settings-layer.is-open,
-.settings-layer:not([hidden]) {
+.settings-layer.is-leaving {
   display: flex;
 }
 
@@ -3043,6 +3052,18 @@ body.is-map .controls {
 
 .settings-layer.is-leaving {
   pointer-events: none;
+}
+
+body.is-settings .stat.streak.is-hot,
+body.is-settings .stat.streak.is-fire,
+body.is-settings .stat.streak.is-god,
+body.is-settings .stat.streak.is-fire::before,
+body.is-settings .stat.streak.is-fire::after,
+body.is-settings .stat.streak.is-fire .streak-pips i.is-on,
+body.is-settings .streak-flare.is-show,
+body.is-settings .streak-flare.is-max .streak-flare-flames::before,
+body.is-settings .streak-flare.is-max .streak-flare-flames::after {
+  animation-play-state: paused;
 }
 
 .settings-backdrop {
@@ -3208,6 +3229,10 @@ body.is-map .controls {
   padding: 1.25rem 1.3rem 1.3rem;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
   contain: layout paint;
+}
+
+.settings-layer.is-open .settings-panel,
+.settings-layer.is-leaving .settings-panel {
   backdrop-filter: var(--glass-blur);
   -webkit-backdrop-filter: var(--glass-blur);
 }
@@ -3250,8 +3275,6 @@ body.is-map .controls {
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .settings-sound {
@@ -3298,8 +3321,6 @@ body.is-map .controls {
   border: 1px solid var(--glass-border);
   border-radius: 12px;
   padding: 0.75rem 0.8rem;
-  backdrop-filter: var(--glass-blur);
-  -webkit-backdrop-filter: var(--glass-blur);
 }
 
 .settings-row input {
@@ -3479,7 +3500,40 @@ body.is-map .controls {
     0 0 16px color-mix(in srgb, var(--region-glow, transparent) 18%, transparent);
 }
 
-/* Leaflet overrides */
+#mapArea .leaflet-bottom.leaflet-left {
+  z-index: 410;
+  display: flex;
+  flex-direction: row;
+  align-items: flex-end;
+  gap: 8px;
+  margin: 0 0 10px 10px;
+}
+
+#mapArea .leaflet-bottom.leaflet-left .leaflet-control {
+  float: none;
+  clear: none;
+  margin: 0;
+}
+
+#mapArea .leaflet-bottom.leaflet-left .leaflet-control-zoom {
+  order: 1;
+}
+
+#mapArea .leaflet-bottom.leaflet-left .leaflet-control-attribution {
+  order: 2;
+}
+
+#mapArea .leaflet-control-attribution {
+  max-width: min(14rem, 52vw);
+  background: rgba(15, 23, 42, 0.72);
+  color: var(--muted);
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+#mapArea .hud-br {
+  z-index: 520;
+}
 .leaflet-popup-content-wrapper,
 .leaflet-popup-tip {
   background: var(--glass) !important;
@@ -3600,6 +3654,9 @@ footer {
     grid-column: 1 / -1;
     grid-row: 3;
     justify-self: stretch;
+  }
+  #mapArea .leaflet-bottom.leaflet-left {
+    margin-bottom: 7.25rem;
   }
   .hud-bc {
     grid-column: 1 / -1;

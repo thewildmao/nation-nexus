@@ -13,7 +13,7 @@ import { renderHome } from "./view/home.js";
 import { renderBreakdown } from "./view/breakdown.js";
 import { renderScoreboard } from "./view/scoreboard.js";
 import { bindHash, readHash, setHash } from "./view/nav.js";
-import { bindSettings, syncSettingsForm } from "./view/settings.js";
+import { bindSettings, closeSettings, isSettingsOpen, prepareSettings, syncSettingsForm } from "./view/settings.js";
 import { bindTimer, syncPlayClock } from "./view/timer.js";
 import { el } from "./view/dom.js";
 import {
@@ -300,11 +300,13 @@ function submitMiss(latlng) {
 function enterMode(route) {
   const mode = typeof route === "string" ? route : route.mode;
   if (mode !== MODES.BREAKDOWN) cancelRecap();
+  if (isSettingsOpen()) closeSettings();
   const boardMode = typeof route === "string" ? null : route.boardMode;
   const recapAt = typeof route === "object" && route ? route.recapAt : null;
   state.mode = mode;
   state.boardMode = boardMode || null;
   showScreen(mode, state.boardMode);
+  prepareSettings(state);
   syncPlayClock(state);
 
   if (mode === MODES.HOME) {
@@ -345,16 +347,21 @@ function enterMode(route) {
     document.body.classList.remove("is-recap");
     if (el.breakdown) el.breakdown.classList.add("hidden");
     bindMap();
+    applyPoolMask();
     renderMapMode(state);
     setTimeout(() => mapView.invalidateSize(), 280);
     setTimeout(() => {
       mapView.invalidateSize();
       if (state.map.explore) {
+        applyPoolMask();
         paintMapChrome();
         return;
       }
       const run = currentRun(state);
-      if (run && !run.finished && state.map.target && state.map.waiting) {
+      const target = state.map.target;
+      const targetInPool = !!(target && state.selectedNames.has(target.name));
+      if (run && !run.finished && targetInPool && state.map.waiting) {
+        applyPoolMask();
         paintMapChrome();
         return;
       }

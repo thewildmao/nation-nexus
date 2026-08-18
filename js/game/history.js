@@ -4,6 +4,8 @@ import { modeSettings } from "./settings.js";
 
 const SCORE_PREFIX = "countryLearner.scores.";
 const OLD_PREFIX = "countryLearner.history.";
+const KEEP_ROWS = 20;
+const scoreCache = new Map();
 
 function emptyScores() {
   return { totals: { points: 0, games: 0 }, bySize: {} };
@@ -19,24 +21,43 @@ function sortBucket(rows) {
   });
 }
 
+function trimBucket(rows) {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.length <= KEEP_ROWS) return sortBucket(list);
+  const latest = list.reduce((a, b) => ((a.at || 0) >= (b.at || 0) ? a : b));
+  const top = sortBucket(list).slice(0, KEEP_ROWS);
+  if (top.some((row) => row.at === latest.at)) return top;
+  return sortBucket([latest, ...top.slice(0, KEEP_ROWS - 1)]);
+}
+
 function saveScores(mode, data) {
+  scoreCache.set(mode, data);
   localStorage.setItem(SCORE_PREFIX + mode, JSON.stringify(data));
 }
 
 export function loadScores(mode) {
+  if (scoreCache.has(mode)) return scoreCache.get(mode);
   migrate(mode);
   try {
     const parsed = JSON.parse(localStorage.getItem(SCORE_PREFIX + mode) || "null");
-    if (!parsed || typeof parsed !== "object") return emptyScores();
-    return {
+    if (!parsed || typeof parsed !== "object") {
+      const empty = emptyScores();
+      scoreCache.set(mode, empty);
+      return empty;
+    }
+    const data = {
       totals: {
         points: Number(parsed.totals?.points) || 0,
         games: Number(parsed.totals?.games) || 0,
       },
       bySize: parsed.bySize && typeof parsed.bySize === "object" ? parsed.bySize : {},
     };
+    scoreCache.set(mode, data);
+    return data;
   } catch {
-    return emptyScores();
+    const empty = emptyScores();
+    scoreCache.set(mode, empty);
+    return empty;
   }
 }
 
@@ -145,7 +166,7 @@ export function archiveRun(state, mode, extra) {
   data.totals.games += 1;
   const size = String(snap.total || 0);
   const prev = data.bySize[size] || [];
-  data.bySize[size] = sortBucket([
+  data.bySize[size] = trimBucket([
     snap,
     ...prev.filter((row) => row.at !== snap.at),
   ]);

@@ -1,4 +1,4 @@
-import { loadPrefs, savePrefs } from "../game/prefs.js";
+import { loadPrefs, persistPrefs, reloadPrefs, savePrefs } from "../game/prefs.js";
 import { applyVolume, playClose, playOpen, previewVolume, unlockSfx } from "./sfx.js";
 import { modeSettings, saveSettings } from "../game/settings.js";
 import { resetRun } from "../game/state.js";
@@ -6,10 +6,13 @@ import { runHasProgress } from "../game/run.js";
 import { settingsScoreLines } from "../game/score-copy.js";
 import { confirmWarn } from "./confirm.js";
 import { el } from "./dom.js";
-import { fillLockup } from "./identity.js";
+import { playTitle } from "./identity.js";
 import { notifyClock } from "./timer.js";
 
 let onChange = () => {};
+let stateRef = null;
+let forNodes = null;
+let scoreNodes = null;
 
 const WARN = {
   repeatPolicy: {
@@ -29,7 +32,7 @@ const WARN = {
   },
 };
 
-function isOpen() {
+export function isSettingsOpen() {
   return !!(el.settingsWrap && el.settingsWrap.classList.contains("is-open"));
 }
 
@@ -37,8 +40,18 @@ function motionMs() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 200;
 }
 
+function cacheNodes() {
+  if (!forNodes && el.settingsOverlay) {
+    forNodes = [...el.settingsOverlay.querySelectorAll("[data-for]")];
+  }
+  if (!scoreNodes && el.settingsWrap) {
+    scoreNodes = [...el.settingsWrap.querySelectorAll("[data-score]")];
+  }
+}
+
 function setScore(key, text) {
-  const node = document.querySelector(`[data-score="${key}"]`);
+  cacheNodes();
+  const node = (scoreNodes || []).find((n) => n.dataset.score === key);
   if (node) node.textContent = text;
 }
 
@@ -51,7 +64,8 @@ function fillScoreLines(mode, cfg) {
 }
 
 function filterSettings(mode) {
-  document.querySelectorAll("#settingsOverlay [data-for]").forEach((node) => {
+  cacheNodes();
+  (forNodes || []).forEach((node) => {
     const games = node.dataset.for.split(/\s+/);
     node.classList.toggle("hidden", !games.includes(mode));
   });
@@ -59,42 +73,16 @@ function filterSettings(mode) {
   el.settingsTitle.classList.add("game-lockup", "is-settings");
   if (el.settingsTitle.dataset.mode === mode) return;
   el.settingsTitle.dataset.mode = mode;
-  fillLockup(el.settingsTitle, mode, "settings");
+  const name = document.createElement("span");
+  name.className = "game-lockup-name";
+  name.textContent = playTitle(mode);
+  const extra = document.createElement("span");
+  extra.className = "game-lockup-extra";
+  extra.textContent = "settings";
+  el.settingsTitle.replaceChildren(name, extra);
 }
 
-export function openSettings(state) {
-  if (!el.settingsWrap) return;
-  filterSettings(state.mode);
-  syncSettingsForm(state);
-  el.settingsWrap.classList.remove("is-leaving");
-  el.settingsWrap.hidden = false;
-  el.settingsWrap.style.display = "";
-  el.settingsWrap.classList.add("is-open");
-  if (el.settingsBtn) el.settingsBtn.setAttribute("aria-expanded", "true");
-  requestAnimationFrame(() => playOpen());
-  notifyClock();
-}
-
-export function closeSettings() {
-  if (!el.settingsWrap) return;
-  const wrap = el.settingsWrap;
-  wrap.classList.remove("is-open");
-  wrap.classList.add("is-leaving");
-  playClose();
-  if (el.settingsBtn) el.settingsBtn.setAttribute("aria-expanded", "false");
-  const hide = () => {
-    if (!el.settingsWrap || el.settingsWrap.classList.contains("is-open")) return;
-    el.settingsWrap.classList.remove("is-leaving");
-    el.settingsWrap.hidden = true;
-    el.settingsWrap.style.display = "none";
-    notifyClock();
-  };
-  if (motionMs() === 0) hide();
-  else window.setTimeout(hide, motionMs());
-  notifyClock();
-}
-
-export function syncSettingsForm(state) {
+function paintForm(state) {
   const cfg = modeSettings(state);
   if (el.hintContinent) el.hintContinent.checked = !!cfg.showContinentHint;
   el.repeatPolicy.forEach((input) => {
@@ -110,32 +98,91 @@ export function syncSettingsForm(state) {
   fillScoreLines(state.mode, cfg);
 }
 
+export function prepareSettings(state) {
+  if (!el.settingsWrap || !state) return;
+  filterSettings(state.mode);
+  paintForm(state);
+}
+
+function parkLayer() {
+  if (!el.settingsWrap) return;
+  el.settingsWrap.classList.remove("is-open", "is-leaving");
+  el.settingsWrap.setAttribute("aria-hidden", "true");
+  if ("inert" in el.settingsWrap) el.settingsWrap.inert = true;
+  document.body.classList.remove("is-settings");
+  if (el.settingsBtn) el.settingsBtn.setAttribute("aria-expanded", "false");
+}
+
+function flushSettings() {
+  persistPrefs();
+  if (stateRef) saveSettings(stateRef.settings);
+}
+
+export function openSettings(state) {
+  if (!el.settingsWrap) return;
+  stateRef = state;
+  reloadPrefs();
+  prepareSettings(state);
+  el.settingsWrap.classList.remove("is-leaving");
+  el.settingsWrap.classList.add("is-open");
+  el.settingsWrap.setAttribute("aria-hidden", "false");
+  if ("inert" in el.settingsWrap) el.settingsWrap.inert = false;
+  document.body.classList.add("is-settings");
+  if (el.settingsBtn) el.settingsBtn.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => playOpen());
+  notifyClock();
+}
+
+export function closeSettings() {
+  if (!el.settingsWrap || !isSettingsOpen()) return;
+  flushSettings();
+  el.settingsWrap.classList.remove("is-open");
+  el.settingsWrap.classList.add("is-leaving");
+  if (el.settingsBtn) el.settingsBtn.setAttribute("aria-expanded", "false");
+  playClose();
+  const hide = () => {
+    if (!el.settingsWrap || isSettingsOpen()) return;
+    parkLayer();
+    notifyClock();
+  };
+  if (motionMs() === 0) hide();
+  else window.setTimeout(hide, motionMs());
+  notifyClock();
+}
+
+export function syncSettingsForm(state) {
+  if (state) stateRef = state;
+  if (!stateRef) return;
+  paintForm(stateRef);
+}
+
 async function applyChange(state, key, write) {
   const progressed = runHasProgress(state.runs[state.mode]);
   if (progressed) {
     const ok = await confirmWarn(WARN[key] || WARN.repeatPolicy);
     if (!ok) {
-      syncSettingsForm(state);
+      paintForm(state);
       return;
     }
     resetRun(state, state.mode);
   }
   write();
-  saveSettings(state.settings);
-  syncSettingsForm(state);
+  paintForm(state);
   onChange(key, { reset: progressed });
 }
 
 export function bindSettings(state, change) {
   onChange = change;
-  syncSettingsForm(state);
+  stateRef = state;
+  parkLayer();
+  prepareSettings(state);
 
   if (!el.settingsBtn || !el.settingsWrap) return;
 
   el.settingsBtn.addEventListener("click", (e) => {
     e.preventDefault();
     e.stopPropagation();
-    if (isOpen()) closeSettings();
+    if (isSettingsOpen()) closeSettings();
     else openSettings(state);
   });
 
@@ -195,9 +242,8 @@ export function bindSettings(state, change) {
   if (el.soundFx) {
     el.soundFx.addEventListener("change", () => {
       const prefs = loadPrefs();
-      savePrefs({ sound: !!el.soundFx.checked, volume: prefs.volume });
+      savePrefs({ sound: !!el.soundFx.checked, volume: prefs.volume }, false);
       applyVolume();
-      syncSettingsForm(state);
     });
   }
   if (el.soundVol) {
@@ -205,16 +251,18 @@ export function bindSettings(state, change) {
     el.soundVol.addEventListener("input", () => {
       const prefs = loadPrefs();
       const volume = Number(el.soundVol.value);
-      savePrefs({ sound: volume > 0 ? true : prefs.sound, volume });
+      savePrefs({ sound: volume > 0 ? true : prefs.sound, volume }, false);
       if (el.soundFx && volume > 0) el.soundFx.checked = true;
       if (el.soundVolOut) el.soundVolOut.textContent = String(volume);
-      el.soundVol.disabled = false;
+      applyVolume();
+    });
+    el.soundVol.addEventListener("change", () => {
       previewVolume();
     });
   }
 
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && isOpen()) {
+    if (e.key === "Escape" && isSettingsOpen()) {
       e.stopPropagation();
       closeSettings();
     }

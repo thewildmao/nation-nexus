@@ -54,6 +54,8 @@ const GEO_ALIASES = {
 };
 
 const byName = new Map(countries.map((c) => [c.name, c]));
+const byLowerName = new Map(countries.map((c) => [c.name.toLowerCase(), c]));
+const geoCache = new Map();
 
 export function getCountry(name) {
   return byName.get(name) || null;
@@ -81,14 +83,16 @@ export function pickRandom(list) {
 export function findByGeoName(geoName) {
   if (!geoName) return null;
   const n = geoName.toLowerCase().trim();
+  if (geoCache.has(n)) return geoCache.get(n);
 
-  const match = countries.find(
-    (c) =>
-      c.name.toLowerCase() === n ||
-      n.includes(c.name.toLowerCase()) ||
-      c.name.toLowerCase().includes(n)
-  );
-  if (match) return match;
-
-  return getCountry(GEO_ALIASES[n]);
+  let match = byLowerName.get(n) || getCountry(GEO_ALIASES[n]);
+  if (!match) {
+    match =
+      countries.find((c) => {
+        const cn = c.name.toLowerCase();
+        return cn && (n.includes(cn) || cn.includes(n));
+      }) || null;
+  }
+  geoCache.set(n, match);
+  return match;
 }

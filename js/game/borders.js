@@ -1,6 +1,7 @@
 import { findByGeoName } from "./catalog.js";
 import { closestBetweenPolygons, closestPointOnPolygons, distanceKm } from "./geo.js";
 
+const rawByName = new Map();
 const polygonsByName = new Map();
 
 function coordToPoint(coord) {
@@ -37,18 +38,24 @@ function geometryToPolygons(geometry) {
 export function indexCountryGeometry(geoName, geometry) {
   try {
     const match = findByGeoName(geoName);
-    if (!match) return;
-    const next = geometryToPolygons(geometry);
-    if (!next.length) return;
-    const prev = polygonsByName.get(match.name) || [];
-    polygonsByName.set(match.name, prev.concat(next));
+    if (!match || !geometry) return;
+    const prev = rawByName.get(match.name) || [];
+    prev.push(geometry);
+    rawByName.set(match.name, prev);
   } catch (err) {
     console.warn("Skipped country outline", geoName, err);
   }
 }
 
 export function polygonsFor(name) {
-  return polygonsByName.get(name) || [];
+  if (polygonsByName.has(name)) return polygonsByName.get(name);
+  const raw = rawByName.get(name) || [];
+  const next = [];
+  raw.forEach((geometry) => {
+    geometryToPolygons(geometry).forEach((poly) => next.push(poly));
+  });
+  polygonsByName.set(name, next);
+  return next;
 }
 
 function fallbackMeasure(from, target) {

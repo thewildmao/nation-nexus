@@ -30,14 +30,25 @@ export function loadPrefs() {
   return { ...read() };
 }
 
-export function savePrefs(prefs) {
+export function reloadPrefs() {
+  cached = null;
+  return loadPrefs();
+}
+
+export function savePrefs(prefs, persist = true) {
   const cur = read();
   cached = {
     sound: prefs.sound !== false,
     volume: clampVolume(prefs.volume == null ? cur.volume : prefs.volume),
   };
-  localStorage.setItem(KEY, JSON.stringify(cached));
+  if (persist) localStorage.setItem(KEY, JSON.stringify(cached));
   return { ...cached };
+}
+
+export function persistPrefs() {
+  const cur = read();
+  localStorage.setItem(KEY, JSON.stringify(cur));
+  return { ...cur };
 }
 
 export function soundEnabled() {

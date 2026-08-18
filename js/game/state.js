@@ -123,10 +123,16 @@ export function awardWrong(state, name) {
   return run.lastAward;
 }
 
+function clearModeView(state, mode) {
+  if (mode === MODES.MAP) state.map = emptyMapRound();
+  if (mode === MODES.FLAGS || mode === MODES.CAPITALS) state.quiz = emptyQuiz();
+}
+
 export function resetRun(state, mode) {
   pauseClock(state.runs[mode]);
   archiveRun(state, mode);
   state.runs[mode] = emptyRun();
+  clearModeView(state, mode);
 }
 
 export function endRun(state, mode, ended) {
@@ -134,12 +140,15 @@ export function endRun(state, mode, ended) {
   const snap = archiveRun(state, mode, { ended });
   state.breakdown = snap || null;
   state.runs[mode] = emptyRun();
+  clearModeView(state, mode);
   return snap;
 }
 
 export function resetAllRuns(state) {
   archiveAllProgress(state);
   state.runs = emptyRuns();
+  state.map = emptyMapRound();
+  state.quiz = emptyQuiz();
 }
 
 export function resetScore(state) {

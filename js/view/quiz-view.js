@@ -24,33 +24,50 @@ function syncAnswerMode(state) {
   });
 }
 
+function paintOptionState(btn, state, opt, i) {
+  btn.disabled = !!state.quiz.answered;
+  btn.classList.toggle("correct", !!(state.quiz.answered && isCorrectOption(state, opt)));
+  btn.classList.toggle(
+    "wrong",
+    !!(state.quiz.answered && i === state.quiz.selectedIndex && !state.quiz.correct)
+  );
+}
+
 function bindOptions(state, onSelect) {
+  if (isTypeIn(state)) {
+    el.options.innerHTML = "";
+    return;
+  }
+  const opts = state.quiz.options || [];
+  const kids = [...el.options.children];
+  const reuse =
+    kids.length === opts.length &&
+    kids.every((btn, i) => btn.dataset.key === optionLabel(state, opts[i]));
+
+  if (reuse) {
+    kids.forEach((btn, i) => paintOptionState(btn, state, opts[i], i));
+    return;
+  }
+
   el.options.innerHTML = "";
-  if (isTypeIn(state)) return;
-  state.quiz.options.forEach((opt, i) => {
+  opts.forEach((opt, i) => {
     const btn = document.createElement("button");
     btn.className = "option-btn";
     btn.dataset.index = String(i);
+    btn.dataset.key = optionLabel(state, opt);
     const label = document.createElement("span");
     label.textContent = optionLabel(state, opt);
     const key = document.createElement("kbd");
     key.className = "option-key";
     key.textContent = String(i + 1);
     btn.append(label, key);
-
-    if (state.quiz.answered) {
-      btn.disabled = true;
-      if (isCorrectOption(state, opt)) btn.classList.add("correct");
-      if (i === state.quiz.selectedIndex && !state.quiz.correct) {
-        btn.classList.add("wrong");
-      }
-    } else {
+    paintOptionState(btn, state, opt, i);
+    if (!state.quiz.answered) {
       btn.addEventListener("pointerdown", (e) => {
         if (e.button != null && e.button !== 0) return;
         onSelect(i);
       });
     }
-
     el.options.appendChild(btn);
   });
 }

@@ -1,6 +1,6 @@
 import { countryProfile, studyHref } from "../game/country-info.js";
 import { getCountry } from "../game/catalog.js";
-import { initCountryMap, showCountryOnMap } from "./country-map.js";
+import { attachCountryMap, showCountryOnMap } from "./country-map.js?v=quiz-map2";
 import { el } from "./dom.js";
 import { APP_NAME, pageTitle } from "./identity.js";
 
@@ -115,8 +115,10 @@ function renderCountryPage(pool, name) {
   }
 
   setStudyTitle(country);
-  initCountryMap((picked) => {
-    location.hash = studyHref(picked);
+  attachCountryMap(el.studyMapHost, {
+    onSelect: (picked) => {
+      location.hash = studyHref(picked);
+    },
   });
   showCountryOnMap(country);
   return true;

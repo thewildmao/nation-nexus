@@ -8,7 +8,22 @@ import {
 } from "../game/quiz.js";
 import { currentRun } from "../game/state.js";
 import { poolSize } from "../game/run.js";
+import { attachCountryMap, showCountryOnMap } from "./country-map.js?v=quiz-map2";
 import { el } from "./dom.js";
+
+function hideQuizMap() {
+  if (el.quizMapHost) el.quizMapHost.classList.add("hidden");
+}
+
+function showQuizMap(country) {
+  if (!el.quizMapHost || !country) {
+    hideQuizMap();
+    return;
+  }
+  el.quizMapHost.classList.remove("hidden");
+  attachCountryMap(el.quizMapHost);
+  showCountryOnMap(country);
+}
 
 function hideType() {
   if (el.typeWrap) el.typeWrap.classList.add("hidden");
@@ -147,11 +162,18 @@ function renderPrompt(state) {
   el.promptDisplay.classList.add("is-enter");
 }
 
+function appendStreakHit(hit, title, pts) {
+  const extra = document.createElement("span");
+  extra.className = hit ? "streak-hit" : "streak-hit is-lost";
+  extra.textContent = `${title} ${pts}`;
+  el.feedback.append(extra);
+}
+
 function renderFeedback(state) {
   el.feedback.className = "feedback";
+  el.feedback.replaceChildren();
 
   if (!state.quiz.answered) {
-    el.feedback.textContent = "";
     el.nextBtn.classList.add("hidden");
     return;
   }
@@ -159,39 +181,51 @@ function renderFeedback(state) {
   el.nextBtn.classList.remove("hidden");
 
   const run = currentRun(state);
-  if (state.quiz.correct) {
-    const award = run && run.lastAward;
-    const call = award && award.bonus ? comboCall(award.streak) : { title: "" };
-    const extra = award && award.bonus
-      ? ` ${call.title || "STREAK"} +${award.bonus}`
+  const award = (state.quiz && state.quiz.award) || (run && run.lastAward);
+  const done =
+    run && run.finished
+      ? `Set complete — ${run.points} pts · ${run.correct}/${poolSize(run, state.selectedNames)}`
       : "";
-    el.feedback.textContent = run && run.finished
-      ? `Correct! Set complete — ${run.points} pts · ${run.correct}/${poolSize(run, state.selectedNames)}`
-      : `Correct! 🎉${extra}`;
+
+  if (state.quiz.correct) {
     el.feedback.classList.add("correct");
+    el.feedback.append(done ? `Correct! ${done}` : "Correct!");
+    if (!done && award && award.bonus) {
+      const call = comboCall(award.streak);
+      appendStreakHit(true, call.title || "STREAK", `+${award.bonus}`);
+    }
     return;
   }
 
   el.feedback.classList.add("wrong");
-  const missed =
-    state.mode === "flags"
-      ? `Wrong — it was ${state.quiz.country.name}`
-      : `Wrong — the capital is ${state.quiz.country.capital}`;
-  const award = run && run.lastAward;
-  const lostCall = award && !award.hit ? comboBreak(award.lostStreak) : { title: "" };
-  const lost =
-    award && !award.hit && award.lostBonus
-      ? ` ${lostCall.title || "STREAK BROKEN"} −${award.lostBonus}`
-      : "";
-  el.feedback.textContent =
-    run && run.finished
-      ? `${missed}. Set complete — ${run.points} pts · ${run.correct}/${poolSize(run, state.selectedNames)}`
-      : `${missed}${lost}`;
+  const line = document.createElement("span");
+  line.className = "feedback-line";
+  const answer = document.createElement("strong");
+  if (state.mode === "flags") {
+    line.append("Wrong — it was ");
+    answer.textContent = state.quiz.country.name;
+  } else {
+    line.append("Wrong — the capital is ");
+    answer.textContent = state.quiz.country.capital;
+  }
+  line.append(answer);
+  el.feedback.append(line);
+  if (award && !award.hit && award.lostBonus) {
+    const lostCall = comboBreak(award.lostStreak);
+    appendStreakHit(false, lostCall.title || "STREAK BROKEN", `−${award.lostBonus}`);
+  }
+  if (done) {
+    const meta = document.createElement("span");
+    meta.className = "feedback-meta";
+    meta.textContent = done;
+    el.feedback.append(meta);
+  }
 }
 
 export function renderQuiz(state, onSelect, pool) {
   const run = currentRun(state);
   if (state.quiz.error === "finished" || (run && run.finished && !state.quiz.country)) {
+    hideQuizMap();
     el.questionText.textContent = "Set complete";
     el.promptDisplay.className = "country-name-display";
     el.promptDisplay.textContent = run
@@ -208,6 +242,7 @@ export function renderQuiz(state, onSelect, pool) {
   }
 
   if (state.quiz.error === "not-enough") {
+    hideQuizMap();
     el.questionText.textContent = "Not enough countries in this region.";
     el.promptDisplay.textContent = "";
     el.options.innerHTML = "";
@@ -230,6 +265,7 @@ export function renderQuiz(state, onSelect, pool) {
   bindOptions(state, onSelect);
   bindType(state, pool || []);
   renderFeedback(state);
+  showQuizMap(state.quiz.country);
 }
 
 function overlayOpen() {
@@ -266,6 +302,8 @@ export function bindQuizKeys(state, onSelect, onNext) {
         e.preventDefault();
         onNext();
       } else if (onMap && el.newMapTarget && !state.map.waiting && !state.map.explore) {
+        const run = currentRun(state);
+        if (run && run.finished) return;
         e.preventDefault();
         el.newMapTarget.click();
       }

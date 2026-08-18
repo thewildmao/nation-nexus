@@ -29,10 +29,10 @@ import {
 } from "./view/hud.js";
 import * as mapView from "./view/map-view.js";
 import { modeSettings, saveSettings } from "./game/settings.js";
-import { bindAnswerMode, bindQuizKeys, bindTypeInput, renderQuiz } from "./view/quiz-view.js";
+import { bindAnswerMode, bindQuizKeys, bindTypeInput, renderQuiz } from "./view/quiz-view.js?v=quiz-map2";
 import { comboBreak, comboCall, comboHeat, finishCall, shoutHoldMs } from "./game/combo.js";
 import { bindUiSfx, playAward, playFinish, playLaunch, playNext } from "./view/sfx.js";
-import { renderStudy } from "./view/study-view.js";
+import { renderStudy } from "./view/study-view.js?v=quiz-map2";
 
 const state = createState();
 
@@ -468,16 +468,10 @@ function bindInput() {
   el.newMapTarget.addEventListener("click", () => {
     if (state.map.explore) return;
     const live = currentRun(state);
-    if (state.map.waiting && !(live && live.finished)) return;
+    if (live && live.finished) return;
+    if (state.map.waiting) return;
     cancelRecap();
-    const run = currentRun(state);
-    if (run && run.finished) {
-      if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
-      else resetRun(state, MODES.MAP);
-      launch(MODES.MAP);
-    } else {
-      playNext();
-    }
+    playNext();
     startMap();
   });
   el.toggleExplore.addEventListener("click", onToggleExplore);

@@ -178,6 +178,18 @@ function parkReplayChip() {
   el.playBrand.appendChild(el.replayChip);
 }
 
+function paintMapNext(state) {
+  if (!el.newMapTarget) return;
+  const run = currentRun(state);
+  const explore = !!(state.map && state.map.explore);
+  const finished = !!(run && run.finished);
+  const waiting = !!(state.map && state.map.waiting && !finished);
+  el.newMapTarget.textContent = "Next";
+  const hide = explore || waiting || finished;
+  el.newMapTarget.classList.toggle("hidden", hide);
+  el.newMapTarget.disabled = hide;
+}
+
 export function renderScore(state) {
   const run = currentRun(state);
   const explore = state.mode === "map" && state.map.explore;
@@ -199,12 +211,7 @@ export function renderScore(state) {
     }
   }
 
-  if (el.newMapTarget) {
-    el.newMapTarget.textContent = run.finished ? "Play again" : "Next";
-    const waiting = !!(state.mode === "map" && state.map.waiting && !run.finished);
-    el.newMapTarget.classList.toggle("hidden", waiting);
-    el.newMapTarget.disabled = waiting || !!(state.mode === "map" && state.map.explore);
-  }
+  paintMapNext(state);
   if (el.nextBtn) {
     el.nextBtn.textContent = run.finished ? "Play again" : "Next Question →";
   }
@@ -410,12 +417,7 @@ export function renderMapMode(state) {
     ? "Browsing — guessing paused"
     : "Where is this country?";
 
-  if (el.newMapTarget) {
-    const run = currentRun(state);
-    const waiting = !!(!explore && state.map.waiting && !(run && run.finished));
-    el.newMapTarget.disabled = explore || waiting;
-    el.newMapTarget.classList.toggle("hidden", waiting);
-  }
+  paintMapNext(state);
 
   if (explore) {
     el.toggleExplore.textContent = "Back to guessing";

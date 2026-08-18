@@ -17,7 +17,7 @@ let marker = null;
 let ready = null;
 let focusName = null;
 let focusCountry = null;
-let onSelect = () => {};
+let onSelect = null;
 let resizeWatch = null;
 
 function geoNameOf(featureOrLayer) {
@@ -42,7 +42,7 @@ function loadOutlines() {
 function isFocus(geoName) {
   if (!focusName) return false;
   const match = findByGeoName(geoName);
-  if (match && match.name === focusName) return true;
+  if (match) return match.name === focusName;
   const n = (geoName || "").toLowerCase();
   const target = focusName.toLowerCase();
   return n === target || n.includes(target) || target.includes(n);
@@ -74,23 +74,25 @@ function focusLayers() {
 }
 
 function placeMarker(country) {
-  if (!map || !country) return;
   if (marker) {
     map.removeLayer(marker);
     marker = null;
   }
+  if (!map || !country) return;
   marker = L.circleMarker([country.lat, country.lng], {
     radius: 5,
     color: "#f1f5f9",
     fillColor: "#38bdf8",
     fillOpacity: 1,
     weight: 2,
-  })
-    .bindPopup(
+    interactive: !!onSelect,
+  }).addTo(map);
+  if (onSelect) {
+    marker.bindPopup(
       `<span class="popup-flag">${country.flag}</span><strong>${country.name}</strong><br>Capital: ${country.capital}`,
       { className: "glass-popup" }
-    )
-    .addTo(map);
+    );
+  }
 }
 
 function fitCountry(country) {
@@ -107,14 +109,23 @@ function fitCountry(country) {
   if (country) map.setView([country.lat, country.lng], 5, { animate: false });
 }
 
+function mapNode() {
+  return document.getElementById("countryMap");
+}
+
+function mapSized() {
+  const node = mapNode();
+  return !!(node && node.clientWidth >= 2 && node.clientHeight >= 2);
+}
+
 function layoutMap() {
-  if (!map) return;
+  if (!map || !mapSized()) return;
   map.invalidateSize({ animate: false });
   fitCountry(focusCountry);
 }
 
 function watchSize() {
-  const node = document.getElementById("countryMap");
+  const node = mapNode();
   if (!node || resizeWatch || typeof ResizeObserver !== "function") return;
   let tick = 0;
   resizeWatch = new ResizeObserver(() => {
@@ -128,14 +139,14 @@ function watchSize() {
 function bindLayer(layer, geoName) {
   layer.on("click", (e) => {
     L.DomEvent.stopPropagation(e);
+    if (!onSelect) return;
     const match = findByGeoName(geoName);
     if (match) onSelect(match.name);
   });
 }
 
-export function initCountryMap(select) {
-  if (select) onSelect = select;
-  if (map || !document.getElementById("countryMap")) return;
+export function initCountryMap() {
+  if (map || !mapNode() || !L) return;
 
   map = L.map("countryMap", {
     center: [20, 10],
@@ -163,6 +174,16 @@ export function initCountryMap(select) {
     .catch((err) => {
       console.warn("Could not load country outlines:", err);
     });
+}
+
+export function attachCountryMap(host, options = {}) {
+  const wrap = document.getElementById("countryMapWrap");
+  if (!host || !wrap) return;
+  onSelect = typeof options.onSelect === "function" ? options.onSelect : null;
+  if (wrap.parentElement !== host) host.appendChild(wrap);
+  initCountryMap();
+  watchSize();
+  window.requestAnimationFrame(() => layoutMap());
 }
 
 export function showCountryOnMap(country) {

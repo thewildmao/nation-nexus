@@ -12,7 +12,7 @@
   <link rel="preload" as="image" href="assets/capital_quest.png" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=map-explore" />
+  <link rel="stylesheet" href="styles.css?v=quiz-miss" />
 </head>
 <body class="is-home">
   <div class="container">
@@ -122,20 +122,25 @@
     <div class="controls" id="controls"></div>
 
     <!-- Flag / Capital Quiz -->
-    <div id="quizArea" class="card hidden">
-      <div class="answer-mode" id="answerMode" role="group" aria-label="How to answer">
-        <button type="button" data-style="choices">Multiple choice</button>
-        <button type="button" data-style="type">Type</button>
+    <div id="quizArea" class="quiz-page hidden">
+      <div class="quiz-layout">
+        <div class="card quiz-main">
+          <div class="answer-mode" id="answerMode" role="group" aria-label="How to answer">
+            <button type="button" data-style="choices">Multiple choice</button>
+            <button type="button" data-style="type">Type</button>
+          </div>
+          <div class="question" id="questionText">Which country is this?</div>
+          <div id="promptDisplay" class="flag-display">🇨🇦</div>
+          <div class="options" id="options"></div>
+          <div class="type-wrap hidden" id="typeWrap">
+            <input id="typeInput" type="text" autocomplete="off" spellcheck="false" />
+            <ul class="type-suggest" id="typeSuggest"></ul>
+          </div>
+          <div class="feedback" id="feedback"></div>
+          <button class="btn-glass next-btn hidden" id="nextBtn">Next Question →</button>
+        </div>
+        <div class="country-map-host hidden" id="quizMapHost"></div>
       </div>
-      <div class="question" id="questionText">Which country is this?</div>
-      <div id="promptDisplay" class="flag-display">🇨🇦</div>
-      <div class="options" id="options"></div>
-      <div class="type-wrap hidden" id="typeWrap">
-        <input id="typeInput" type="text" autocomplete="off" spellcheck="false" />
-        <ul class="type-suggest" id="typeSuggest"></ul>
-      </div>
-      <div class="feedback" id="feedback"></div>
-      <button class="btn-glass next-btn hidden" id="nextBtn">Next Question →</button>
     </div>
 
     <!-- Map Quiz -->
@@ -237,8 +242,10 @@
         <a class="country-back" href="#/study">← All countries</a>
         <div class="country-layout">
           <div class="country-card" id="countryCard"></div>
-          <div class="country-map-wrap">
-            <div id="countryMap"></div>
+          <div class="country-map-host" id="studyMapHost">
+            <div class="country-map-wrap" id="countryMapWrap">
+              <div id="countryMap"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -373,6 +380,6 @@
       document.body.append(pre);
     });
   </script>
-  <script type="module" src="js/main.js?v=map-explore"></script>
+  <script type="module" src="js/main.js?v=quiz-miss2"></script>
 </body>
 </html>

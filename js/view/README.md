@@ -16,6 +16,6 @@ Everything the browser sees. Game files never import from here.
 | `settings.js` | Settings overlay, hint, and repeat policy |
 | `confirm.js` | Centered frosted warning dialog |
 | `map-view.js` | Leaflet map, colors, labels, guess overlays |
-| `quiz-view.js` | Flag / capital buttons |
+| `quiz-view.js` | Flag / capital buttons and locator map |
 | `study-view.js` | Study grid and country info page |
-| `country-map.js` | Leaflet map on the country info page |
+| `country-map.js` | Shared Leaflet locator (study + quiz) |

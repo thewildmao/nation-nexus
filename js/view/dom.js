@@ -16,6 +16,7 @@ export const el = {
   replayChip: document.getElementById("replayChip"),
   backHome: document.getElementById("backHome"),
   quizArea: document.getElementById("quizArea"),
+  quizMapHost: document.getElementById("quizMapHost"),
   mapArea: document.getElementById("mapArea"),
   studyArea: document.getElementById("studyArea"),
   questionText: document.getElementById("questionText"),
@@ -102,6 +103,7 @@ export const el = {
   studyBrowse: document.getElementById("studyBrowse"),
   countryPage: document.getElementById("countryPage"),
   countryCard: document.getElementById("countryCard"),
+  studyMapHost: document.getElementById("studyMapHost"),
 };
 
 export function tabs() {

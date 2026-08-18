@@ -77,6 +77,7 @@ export function startQuizRound(state, countries) {
     typedValue: "",
     answerStyle: typed ? "type" : "choices",
     correct: false,
+    award: null,
     error: null,
   };
   touchStart(run);
@@ -97,8 +98,9 @@ export function gradeQuizAnswer(state, index) {
   state.quiz.selectedIndex = index;
   state.quiz.correct = correct;
 
-  if (correct) awardCorrect(state, state.quiz.country.name);
-  else awardWrong(state, state.quiz.country.name);
+  state.quiz.award = correct
+    ? awardCorrect(state, state.quiz.country.name)
+    : awardWrong(state, state.quiz.country.name);
   logQuizTurn(state, optionLabel(state, option));
 }
 
@@ -109,8 +111,9 @@ export function gradeTypedAnswer(state, text) {
   state.quiz.answered = true;
   state.quiz.typedValue = text;
   state.quiz.correct = correct;
-  if (correct) awardCorrect(state, state.quiz.country.name);
-  else awardWrong(state, state.quiz.country.name);
+  state.quiz.award = correct
+    ? awardCorrect(state, state.quiz.country.name)
+    : awardWrong(state, state.quiz.country.name);
   logQuizTurn(state, String(text || "").trim());
 }
 

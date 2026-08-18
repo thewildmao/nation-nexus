@@ -47,6 +47,7 @@ export function emptyQuiz() {
     typedValue: "",
     answerStyle: null,
     correct: false,
+    award: null,
     error: null,
   };
 }

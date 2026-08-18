@@ -1,6 +1,7 @@
 import {
   HINT_PENALTY,
   MISS_BONUS,
+  PLAYABLE_MODES,
   STREAK_MAX_BONUS,
   STREAK_STEP,
   baseAward,
@@ -54,95 +55,140 @@ export function settingsScoreLines(mode, cfg = {}) {
   };
 }
 
-export function guideModel() {
-  const mapBase = baseAward("map", {});
-  const typeBase = baseAward("flags", { answerStyle: "type" });
-  const hinted = hintedAward(mapBase);
-  const cap = streakCapStreak();
-  const sampleStreak = Math.min(3, cap);
-  const lines = settingsScoreLines("map", {});
+const GAME_BLURB = {
+  map: "A country is named. Click it on the map.",
+  flags: "See a flag. Pick the country, or type it.",
+  capitals: "See a country. Pick its capital, or type it.",
+};
 
-  const ladder = [];
-  for (let streak = 1; streak <= cap; streak += 1) {
-    const row = awardBreakdown({ mode: "map", streak });
-    ladder.push({
-      label: streak === cap ? `${streak}+ in a row` : `${streak} in a row`,
-      bonus: row.bonus,
-      total: row.total,
+export function guideGames() {
+  return PLAYABLE_MODES.map((mode) => ({
+    mode,
+    href: `#/how/${mode}`,
+    playHref: `#/${mode}`,
+    blurb: GAME_BLURB[mode],
+  }));
+}
+
+export function guideModel(mode) {
+  if (!PLAYABLE_MODES.includes(mode)) return null;
+  const choice = baseAward(mode, { answerStyle: "choices" });
+  const typed = baseAward(mode, { answerStyle: "type" });
+  const hinted = hintedAward(baseAward("map", {}));
+  const cap = streakCapStreak();
+  const lines = settingsScoreLines(mode, {});
+  const first = awardBreakdown({ mode, streak: 1 });
+  const hot = awardBreakdown({ mode, streak: 3 });
+  const hintedHot =
+    mode === "map"
+      ? awardBreakdown({ mode: "map", hint: true, streak: 3 })
+      : null;
+
+  const steps =
+    mode === "map"
+      ? [
+          [{ t: "A country is named at the top of the map." }],
+          [{ t: "Click", b: true }, { t: " that country." }],
+          [
+            { t: "A miss is " },
+            { t: "0 points", b: true },
+            { t: " and the streak goes back to " },
+            { t: "0", b: true },
+            { t: "." },
+          ],
+        ]
+      : mode === "flags"
+        ? [
+            [{ t: "A flag is shown." }],
+            [
+              { t: "Pick the country", b: true },
+              { t: " from the list, or " },
+              { t: "type its name", b: true },
+              { t: "." },
+            ],
+            [
+              { t: "A miss is " },
+              { t: "0 points", b: true },
+              { t: " and the streak goes back to " },
+              { t: "0", b: true },
+              { t: "." },
+            ],
+          ]
+        : [
+            [{ t: "A country is shown." }],
+            [
+              { t: "Pick its capital", b: true },
+              { t: " from the list, or " },
+              { t: "type the city", b: true },
+              { t: "." },
+            ],
+            [
+              { t: "A miss is " },
+              { t: "0 points", b: true },
+              { t: " and the streak goes back to " },
+              { t: "0", b: true },
+              { t: "." },
+            ],
+          ];
+
+  const scoringRows = [
+    {
+      label: mode === "map" ? "Correct click" : "Multiple choice",
+      value: String(choice),
+    },
+  ];
+  if (mode !== "map") {
+    scoringRows.push({ label: "Type the answer", value: String(typed) });
+  }
+  if (mode === "map") {
+    scoringRows.push({
+      label: "Continent hint on",
+      value: `${hinted} instead of ${choice} (−${hintPercent()}%)`,
     });
+  }
+  scoringRows.push({
+    label: "Streak (2nd hit and up)",
+    value: `+${STREAK_STEP} each, max +${STREAK_MAX_BONUS}`,
+  });
+  scoringRows.push({
+    label: "Clear a miss (Only misses)",
+    value: `+${MISS_BONUS} after the rest`,
+  });
+
+  const notes = [
+    "The region picker is shared. Changing regions starts a new score for all three games.",
+    "Changing how you answer or how countries repeat ends this game’s current run and saves it.",
+  ];
+  if (mode === "map") {
+    notes.splice(1, 0, "Turning the continent hint on or off ends the current map run.");
+    notes.push("Exit and explore resets the map run.");
   }
 
   return {
-    intro:
-      "Three minigames share one region pool. Each game keeps its own score, timer, and streak.",
-    games: [
-      {
-        href: "#/map",
-        title: "Nation Needle",
-        blurb: "A country is named. Click it on the map.",
-      },
-      {
-        href: "#/flags",
-        title: "Flag Master",
-        blurb: "See a flag. Pick the country, or type it.",
-      },
-      {
-        href: "#/capitals",
-        title: "Capital Quest",
-        blurb: "See a country. Pick its capital, or type it.",
-      },
-    ],
+    mode,
+    playHref: `#/${mode}`,
+    intro: GAME_BLURB[mode],
+    steps,
     scoringLead:
       "Wrong answers are 0. A correct answer is the base, then the streak bonus, then a miss-clear bonus if that setting is on.",
-    scoringRows: [
-      { label: "Map / multiple choice", value: String(mapBase) },
-      { label: "Type the answer (flags & capitals)", value: String(typeBase) },
-      {
-        label: "Continent hint on (map)",
-        value: `${hinted} instead of ${mapBase} (−${hintPercent()}%)`,
-      },
-      {
-        label: "Clear a miss (Only misses)",
-        value: `+${MISS_BONUS} after the rest`,
-      },
-    ],
+    scoringRows,
     streakLead: `The first correct in a row is just the base. From the 2nd on, add +${STREAK_STEP} per extra hit, up to +${STREAK_MAX_BONUS} at ${cap} in a row. A miss sets the streak back to 0.`,
-    ladder,
-    ladderNote: `Totals below use map / multiple choice with the hint off (${mapBase} base). Type-in uses ${typeBase}. Hint uses ${hinted}.`,
-    examples: [
-      {
-        label: "Map, no hint, first correct",
-        value: String(awardBreakdown({ mode: "map", streak: 1 }).total),
-      },
-      {
-        label: `Map, hint on, ${sampleStreak} in a row`,
-        value: String(
-          awardBreakdown({ mode: "map", hint: true, streak: sampleStreak }).total
-        ),
-      },
-      {
-        label: "Flags, type-in, first correct",
-        value: String(
-          awardBreakdown({ mode: "flags", answerStyle: "type", streak: 1 }).total
-        ),
-      },
-      {
-        label: "Map, no hint, 2 in a row, clearing a miss",
-        value: String(
-          awardBreakdown({ mode: "map", streak: 2, clearingMiss: true }).total
-        ),
-      },
-    ],
+    example: {
+      label: "Example",
+      lines: [
+        { label: "First correct", value: String(first.total) },
+        { label: "3 in a row", value: String(hot.total) },
+        ...(hintedHot
+          ? [{ label: "3 in a row, hint on", value: String(hintedHot.total) }]
+          : []),
+      ],
+    },
     repeats: [
       { title: "Never — end the set", body: lines["repeat-once"] },
       { title: "After the full set", body: lines["repeat-cycle"] },
       { title: "Anytime", body: lines["repeat-random"] },
       { title: "Only misses", body: lines["repeat-misses"] },
     ],
-    notes: [
-      "The region picker is shared. Changing regions starts a new score for Nation Needle, Flag Master, and Capital Quest.",
-      "Changing the hint, how you answer, or how countries repeat ends that game’s current run and saves it.",
-      "Explore on the map resets the map run.",
-    ],
+    notes,
   };
 }

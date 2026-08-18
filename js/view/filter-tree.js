@@ -9,6 +9,7 @@ import {
   summarizeSelection,
 } from "../game/regions.js";
 import { el } from "./dom.js";
+import { playClose, playOpen } from "./sfx.js";
 import { notifyClock } from "./timer.js";
 
 const expanded = new Set();
@@ -199,6 +200,7 @@ function close(state) {
     el.filterLayer.classList.add("is-leaving");
   }
   el.filterToggle.setAttribute("aria-expanded", "false");
+  playClose();
   if (motionMs() === 0) hideLayer();
   else window.setTimeout(hideLayer, motionMs());
   notifyClock();
@@ -217,16 +219,15 @@ function openPop(state) {
   open = true;
   snapshot = new Set(state.selectedNames);
   if (el.filterLayer) {
-    document.body.appendChild(el.filterLayer);
     el.filterLayer.classList.remove("is-leaving");
     el.filterLayer.hidden = false;
+    el.filterLayer.style.display = "";
     el.filterLayer.classList.add("is-open");
-    el.filterLayer.style.cssText =
-      "position:fixed;inset:0;z-index:2147482990;display:flex;align-items:center;justify-content:center;padding:24px;";
   }
   if (el.filterPop) el.filterPop.classList.add("is-open");
   el.filterToggle.setAttribute("aria-expanded", "true");
-  render(state);
+  updateLabel(state);
+  requestAnimationFrame(() => playOpen());
   notifyClock();
 }
 

@@ -4,15 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nation Nexus</title>
+  <link rel="icon" href="assets/main_game_logo.png" type="image/png" />
+  <link rel="apple-touch-icon" href="assets/main_game_logo.png" />
+  <link rel="preload" as="image" href="assets/main_game_logo.png" />
+  <link rel="preload" as="image" href="assets/nation_needle.png" />
+  <link rel="preload" as="image" href="assets/flag_master.png" />
+  <link rel="preload" as="image" href="assets/capital_quest.png" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=map-orig" />
+  <link rel="stylesheet" href="styles.css?v=sfx-rise" />
 </head>
 <body class="is-home">
   <div class="container">
     <section id="home" class="home">
       <header class="home-header">
-        <h1>Nation Nexus</h1>
+        <h1 class="home-mark">
+          <img class="game-logo is-home" src="assets/main_game_logo.png" alt="Nation Nexus" />
+        </h1>
         <div class="home-header-links">
           <a class="ghost-link" href="#/how">How to play</a>
           <a class="scoreboard-link is-compact" href="#/scoreboard"><span class="link-wide">Scoreboard</span><span class="link-narrow">Scores</span></a>
@@ -21,10 +29,13 @@
       <div class="home-toolbar" id="homeToolbar"></div>
       <div class="game-grid" id="gameGrid">
         <div class="game-card-wrap" data-card="map">
+          <a class="game-card-chip game-card-scores" href="#/scoreboard/map" title="Scoreboard" aria-label="Scoreboard">🥇</a>
+          <a class="game-card-chip game-card-help" href="#/how/map" title="How to Play" aria-label="How to Play">?</a>
           <a class="game-card" href="#/map" data-mode="map">
             <div class="game-card-top">
-              <h2 class="game-card-name">Nation Needle</h2>
+              <img class="game-logo is-card" src="assets/nation_needle.png" alt="Nation Needle" />
               <span class="game-card-badge hidden" data-badge="map">In progress</span>
+              <span class="game-card-play" data-status="map">Play</span>
             </div>
             <p>A country is named. Click it on the map.</p>
             <div class="game-card-progress hidden" data-progress="map">
@@ -33,16 +44,15 @@
             </div>
             <p class="game-card-meta" data-meta="map"></p>
           </a>
-          <div class="game-card-foot">
-            <span class="game-card-status" data-status="map">Play</span>
-            <a class="card-scores" href="#/scoreboard/map">Scores</a>
-          </div>
         </div>
         <div class="game-card-wrap" data-card="flags">
+          <a class="game-card-chip game-card-scores" href="#/scoreboard/flags" title="Scoreboard" aria-label="Scoreboard">🥇</a>
+          <a class="game-card-chip game-card-help" href="#/how/flags" title="How to Play" aria-label="How to Play">?</a>
           <a class="game-card" href="#/flags" data-mode="flags">
             <div class="game-card-top">
-              <h2 class="game-card-name">Flag Master</h2>
+              <img class="game-logo is-card" src="assets/flag_master.png" alt="Flag Master" />
               <span class="game-card-badge hidden" data-badge="flags">In progress</span>
+              <span class="game-card-play" data-status="flags">Play</span>
             </div>
             <p>See a flag. Pick the country.</p>
             <div class="game-card-progress hidden" data-progress="flags">
@@ -51,16 +61,15 @@
             </div>
             <p class="game-card-meta" data-meta="flags"></p>
           </a>
-          <div class="game-card-foot">
-            <span class="game-card-status" data-status="flags">Play</span>
-            <a class="card-scores" href="#/scoreboard/flags">Scores</a>
-          </div>
         </div>
         <div class="game-card-wrap" data-card="capitals">
+          <a class="game-card-chip game-card-scores" href="#/scoreboard/capitals" title="Scoreboard" aria-label="Scoreboard">🥇</a>
+          <a class="game-card-chip game-card-help" href="#/how/capitals" title="How to Play" aria-label="How to Play">?</a>
           <a class="game-card" href="#/capitals" data-mode="capitals">
             <div class="game-card-top">
-              <h2 class="game-card-name">Capital Quest</h2>
+              <img class="game-logo is-card" src="assets/capital_quest.png" alt="Capital Quest" />
               <span class="game-card-badge hidden" data-badge="capitals">In progress</span>
+              <span class="game-card-play" data-status="capitals">Play</span>
             </div>
             <p>See a country. Pick its capital.</p>
             <div class="game-card-progress hidden" data-progress="capitals">
@@ -69,32 +78,31 @@
             </div>
             <p class="game-card-meta" data-meta="capitals"></p>
           </a>
-          <div class="game-card-foot">
-            <span class="game-card-status" data-status="capitals">Play</span>
-            <a class="card-scores" href="#/scoreboard/capitals">Scores</a>
-          </div>
         </div>
       </div>
       <div class="home-links">
-        <a class="study-link" href="#/how">How scoring works</a>
         <a class="study-link" href="#/study">Study the countries</a>
       </div>
     </section>
 
     <div id="playChrome" class="play-chrome hidden">
-      <a class="back-games" id="backHome" href="#/">← Games</a>
-      <div class="play-chrome-brand" id="playBrand">
+      <div class="play-chrome-mark">
         <div id="playTitle" class="play-title game-lockup">Nation Needle</div>
-        <p class="play-kicker" id="playKicker">Find the country</p>
-        <div class="map-mode-chip replay-chip" id="replayChip" hidden></div>
       </div>
-      <div class="play-chrome-actions">
-        <div class="run-actions" id="runActions">
-          <button type="button" class="btn-glass is-ok" id="newGame">New<span class="link-wide"> game</span></button>
-          <button type="button" class="btn-glass is-danger" id="exitGame">Exit<span class="link-wide"> game</span></button>
+      <div class="play-chrome-bar">
+        <a class="btn-glass back-games" id="backHome" href="#/">← Games</a>
+        <div class="play-chrome-brand" id="playBrand">
+          <p class="play-kicker" id="playKicker">Find the country</p>
+          <div class="map-mode-chip replay-chip" id="replayChip" hidden></div>
         </div>
-        <a class="scoreboard-link is-compact" id="scoreboardNav" href="#/scoreboard"><span class="link-wide">Scoreboard</span><span class="link-narrow">Scores</span></a>
-        <button type="button" class="settings-btn" id="settingsBtn" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settingsOverlay">⚙</button>
+        <div class="play-chrome-actions">
+          <div class="run-actions" id="runActions">
+            <button type="button" class="btn-glass is-ok" id="newGame">New game</button>
+            <button type="button" class="btn-glass is-danger" id="exitGame">Exit game</button>
+          </div>
+          <a class="btn-glass" id="scoreboardNav" href="#/scoreboard"><span class="link-wide">Scoreboard</span><span class="link-narrow">Scores</span></a>
+          <button type="button" class="btn-glass settings-btn" id="settingsBtn" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settingsOverlay">⚙</button>
+        </div>
       </div>
     </div>
 
@@ -189,6 +197,7 @@
           <div class="hud-br" id="hudBr">
             <div class="run-dock" id="runDock">
               <div class="streak-flare" id="streakFlare" hidden>
+                <span class="streak-flare-flames" aria-hidden="true"></span>
                 <span class="streak-flare-kicker" id="streakFlareKicker">HOT STREAK</span>
                 <span class="streak-flare-pts" id="streakFlarePts">+20</span>
               </div>
@@ -244,6 +253,11 @@
     <footer>Map tiles need internet • Quizzes work offline</footer>
   </div>
 
+  <div id="comboShout" class="combo-shout" hidden aria-hidden="true">
+    <span class="combo-shout-title" id="comboShoutTitle"></span>
+    <span class="combo-shout-pts" id="comboShoutPts"></span>
+  </div>
+
   <div class="confirm-layer" id="confirmWrap" hidden>
     <button type="button" class="confirm-backdrop" id="confirmBackdrop" tabindex="-1" aria-label="Dismiss warning"></button>
     <div class="confirm-panel" role="alertdialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmMessage">
@@ -264,6 +278,20 @@
         <h2 id="settingsTitle">Settings</h2>
         <button type="button" class="settings-close" id="settingsClose">Close</button>
       </div>
+      <fieldset class="settings-fieldset settings-sound">
+        <legend>Audio</legend>
+        <label class="settings-row">
+          <input type="checkbox" id="soundFx" checked />
+          <span>
+            <strong>Sound effects</strong>
+            <small>Clicks, hits, misses, and start jingles</small>
+          </span>
+        </label>
+        <label class="settings-volume">
+          <span class="settings-volume-label">Volume <strong id="soundVolOut">70</strong></span>
+          <input type="range" id="soundVol" min="0" max="100" value="70" />
+        </label>
+      </fieldset>
       <p class="settings-score settings-streak" data-score="streak">Streak +20 per extra correct, max +80</p>
       <label class="settings-row" data-for="map">
         <input type="checkbox" id="hintContinent" checked />
@@ -332,6 +360,18 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-  <script type="module" src="js/main.js?v=map-orig"></script>
+  <script>
+    window.addEventListener("error", (event) => {
+      if (document.querySelector(".boot-error")) return;
+      const msg = String((event && event.message) || "");
+      const file = String((event && event.filename) || "");
+      if (!/\/js\/|\.js(?:\?|$)|import|export|module/i.test(msg + " " + file)) return;
+      const pre = document.createElement("pre");
+      pre.className = "boot-error";
+      pre.textContent = (msg || "The game failed to start.") + "\nReload the page (Cmd+Shift+R).";
+      document.body.append(pre);
+    });
+  </script>
+  <script type="module" src="js/main.js?v=sfx-rise"></script>
 </body>
 </html>

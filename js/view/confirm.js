@@ -44,12 +44,10 @@ export function confirmWarn({
   if (el.confirmOk) el.confirmOk.textContent = confirmLabel;
   if (el.confirmCancel) el.confirmCancel.textContent = cancelLabel;
 
-  document.body.appendChild(el.confirmWrap);
   el.confirmWrap.classList.remove("is-leaving");
   el.confirmWrap.hidden = false;
+  el.confirmWrap.style.display = "";
   el.confirmWrap.classList.add("is-open");
-  el.confirmWrap.style.cssText =
-    "position:fixed;inset:0;z-index:2147483001;display:flex;align-items:center;justify-content:center;padding:24px;";
 
   queueMicrotask(() => {
     if (el.confirmCancel) el.confirmCancel.focus();

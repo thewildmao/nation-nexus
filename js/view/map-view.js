@@ -234,6 +234,69 @@ function hoverStyle(geoName) {
   };
 }
 
+const TAP_PX = 8;
+const TAP_HOLD_MS = 20;
+
+function isPrimary(e) {
+  const ev = e.originalEvent;
+  if (!ev) return true;
+  if (typeof ev.button === "number" && ev.button !== 0) return false;
+  return true;
+}
+
+function bindTap(emitter, onTap, stop) {
+  let start = null;
+  let moved = false;
+  let fired = false;
+  let timer = 0;
+
+  function reset() {
+    start = null;
+    moved = false;
+    fired = false;
+    window.clearTimeout(timer);
+    if (map) map.off("dragstart", reset);
+  }
+
+  function fire(e) {
+    if (fired || !start) return;
+    fired = true;
+    const payload = start;
+    reset();
+    onTap(payload, e);
+  }
+
+  emitter.on("mousedown", (e) => {
+    if (stop) L.DomEvent.stopPropagation(e);
+    if (!isPrimary(e)) return;
+    start = { latlng: e.latlng, containerPoint: e.containerPoint };
+    moved = false;
+    fired = false;
+    window.clearTimeout(timer);
+    if (map) map.once("dragstart", reset);
+    timer = window.setTimeout(() => {
+      if (start && !moved) fire(e);
+    }, TAP_HOLD_MS);
+  });
+
+  emitter.on("mousemove", (e) => {
+    if (!start || moved || !e.containerPoint || !start.containerPoint) return;
+    if (e.containerPoint.distanceTo(start.containerPoint) <= TAP_PX) return;
+    moved = true;
+    window.clearTimeout(timer);
+    start = null;
+    if (map) map.off("dragstart", reset);
+  });
+
+  emitter.on("mouseup", (e) => {
+    if (!start || moved) {
+      reset();
+      return;
+    }
+    fire(e);
+  });
+}
+
 function bindCountryLayer(layer, geoName) {
   layer.on({
     mouseover: (e) => {
@@ -252,11 +315,19 @@ function bindCountryLayer(layer, geoName) {
       if (handlers.isExplore()) {
         if (handlers.onExploreSelect) handlers.onExploreSelect(geoName);
         openExplorePopup(layer, geoName);
-      } else if (handlers.isWaiting()) {
-        handlers.onCountryClick(geoName, e.latlng);
+        return;
       }
+      if (handlers.isWaiting()) handlers.onCountryClick(geoName, e.latlng);
     },
   });
+  bindTap(
+    layer,
+    (payload, e) => {
+      if (handlers.isExplore() || !handlers.isWaiting()) return;
+      handlers.onCountryClick(geoName, payload.latlng || e.latlng);
+    },
+    true
+  );
 }
 
 const COUNTRY_OUTLINES = [
@@ -323,7 +394,10 @@ export function initMap(callbacks) {
   }).addTo(map);
 
   resultLayer = L.layerGroup().addTo(map);
-  map.on("click", (e) => handlers.onMiss(e.latlng));
+  bindTap(map, (payload, e) => {
+    if (handlers.isExplore() || !handlers.isWaiting()) return;
+    handlers.onMiss(payload.latlng || e.latlng);
+  });
   loadCountryPolygons();
 }
 

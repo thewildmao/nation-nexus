@@ -1,7 +1,7 @@
 import { getCountry } from "../game/catalog.js";
 import { latestScore } from "../game/history.js";
 import { formatElapsed } from "../game/run.js";
-import { playTitle } from "./identity.js";
+import { fillLockup } from "./identity.js";
 
 function styleLabel(style) {
   if (style === "type") return "Type-in";
@@ -213,10 +213,7 @@ export function renderBreakdown(state, onReplayMisses, opts = {}) {
   const title = document.createElement("h2");
   title.className = "game-lockup is-recap";
   const recapMode = recap.mode || mode;
-  const recapName = document.createElement("span");
-  recapName.className = "game-lockup-name";
-  recapName.textContent = playTitle(recapMode);
-  title.append(recapName);
+  fillLockup(title, recapMode);
 
   const actions = document.createElement("div");
   actions.className = "breakdown-actions";
@@ -249,6 +246,9 @@ export function renderBreakdown(state, onReplayMisses, opts = {}) {
   if (recapTurns(recap).length) body.append(renderTurns(recap, mode));
   else body.append(renderMissesFallback(recap));
 
+  root.classList.toggle("is-fresh", !!opts.fresh);
+  const asked = recap.asked || 0;
+  root.classList.toggle("is-perfect", !!(opts.fresh && asked && recap.correct === asked));
   root.append(kicker, title, body, actions);
 
   const backdrop = document.getElementById("breakdownBackdrop");

@@ -1,10 +1,12 @@
+import { loadPrefs, savePrefs } from "../game/prefs.js";
+import { applyVolume, playClose, playOpen, previewVolume, unlockSfx } from "./sfx.js";
 import { modeSettings, saveSettings } from "../game/settings.js";
 import { resetRun } from "../game/state.js";
 import { runHasProgress } from "../game/run.js";
 import { settingsScoreLines } from "../game/score-copy.js";
 import { confirmWarn } from "./confirm.js";
 import { el } from "./dom.js";
-import { playTitle } from "./home.js";
+import { fillLockup } from "./identity.js";
 import { notifyClock } from "./timer.js";
 
 let onChange = () => {};
@@ -42,7 +44,10 @@ function setScore(key, text) {
 
 function fillScoreLines(mode, cfg) {
   const lines = settingsScoreLines(mode, cfg);
-  Object.entries(lines).forEach(([key, text]) => setScore(key, text));
+  const key = JSON.stringify(lines);
+  if (el.settingsWrap && el.settingsWrap.dataset.scoreKey === key) return;
+  if (el.settingsWrap) el.settingsWrap.dataset.scoreKey = key;
+  Object.entries(lines).forEach(([line, text]) => setScore(line, text));
 }
 
 function filterSettings(mode) {
@@ -50,20 +55,23 @@ function filterSettings(mode) {
     const games = node.dataset.for.split(/\s+/);
     node.classList.toggle("hidden", !games.includes(mode));
   });
-  if (el.settingsTitle) el.settingsTitle.textContent = `${playTitle(mode)} settings`;
+  if (!el.settingsTitle) return;
+  el.settingsTitle.classList.add("game-lockup", "is-settings");
+  if (el.settingsTitle.dataset.mode === mode) return;
+  el.settingsTitle.dataset.mode = mode;
+  fillLockup(el.settingsTitle, mode, "settings");
 }
 
 export function openSettings(state) {
   if (!el.settingsWrap) return;
   filterSettings(state.mode);
   syncSettingsForm(state);
-  document.body.appendChild(el.settingsWrap);
   el.settingsWrap.classList.remove("is-leaving");
   el.settingsWrap.hidden = false;
+  el.settingsWrap.style.display = "";
   el.settingsWrap.classList.add("is-open");
-  el.settingsWrap.style.cssText =
-    "position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:24px;";
   if (el.settingsBtn) el.settingsBtn.setAttribute("aria-expanded", "true");
+  requestAnimationFrame(() => playOpen());
   notifyClock();
 }
 
@@ -72,6 +80,7 @@ export function closeSettings() {
   const wrap = el.settingsWrap;
   wrap.classList.remove("is-open");
   wrap.classList.add("is-leaving");
+  playClose();
   if (el.settingsBtn) el.settingsBtn.setAttribute("aria-expanded", "false");
   const hide = () => {
     if (!el.settingsWrap || el.settingsWrap.classList.contains("is-open")) return;
@@ -94,6 +103,10 @@ export function syncSettingsForm(state) {
   el.answerStyle.forEach((input) => {
     input.checked = input.value === cfg.answerStyle;
   });
+  const prefs = loadPrefs();
+  if (el.soundFx) el.soundFx.checked = prefs.sound !== false;
+  if (el.soundVol) el.soundVol.value = String(prefs.volume);
+  if (el.soundVolOut) el.soundVolOut.textContent = String(prefs.volume);
   fillScoreLines(state.mode, cfg);
 }
 
@@ -178,6 +191,27 @@ export function bindSettings(state, change) {
       });
     });
   });
+
+  if (el.soundFx) {
+    el.soundFx.addEventListener("change", () => {
+      const prefs = loadPrefs();
+      savePrefs({ sound: !!el.soundFx.checked, volume: prefs.volume });
+      applyVolume();
+      syncSettingsForm(state);
+    });
+  }
+  if (el.soundVol) {
+    el.soundVol.addEventListener("pointerdown", () => unlockSfx());
+    el.soundVol.addEventListener("input", () => {
+      const prefs = loadPrefs();
+      const volume = Number(el.soundVol.value);
+      savePrefs({ sound: volume > 0 ? true : prefs.sound, volume });
+      if (el.soundFx && volume > 0) el.soundFx.checked = true;
+      if (el.soundVolOut) el.soundVolOut.textContent = String(volume);
+      el.soundVol.disabled = false;
+      previewVolume();
+    });
+  }
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape" && isOpen()) {

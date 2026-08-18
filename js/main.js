@@ -24,14 +24,35 @@ import {
   renderScore,
   renderWaitingPrompt,
   setMapFeedback,
+  shoutCombo,
   showScreen,
 } from "./view/hud.js";
 import * as mapView from "./view/map-view.js";
 import { modeSettings, saveSettings } from "./game/settings.js";
 import { bindAnswerMode, bindQuizKeys, bindTypeInput, renderQuiz } from "./view/quiz-view.js";
+import { comboBreak, comboCall, comboHeat, finishCall, shoutHoldMs } from "./game/combo.js";
+import { bindUiSfx, playAward, playFinish, playLaunch, playNext } from "./view/sfx.js";
 import { renderStudy } from "./view/study-view.js";
 
 const state = createState();
+
+function launch(mode) {
+  requestAnimationFrame(() => playLaunch(mode));
+}
+
+let heardAward = null;
+
+function announceAward() {
+  const run = currentRun(state);
+  const award = run && run.lastAward;
+  if (!award || award === heardAward) return;
+  heardAward = award;
+  playAward(award);
+}
+
+function afterSound(fn) {
+  requestAnimationFrame(fn);
+}
 
 function currentPool() {
   return filterPool(state, countries);
@@ -109,13 +130,75 @@ async function applyAnswerStyle(style) {
   renderScore(state);
 }
 
+let recapTimer = 0;
+let recapToken = 0;
+
+function cancelRecap() {
+  window.clearTimeout(recapTimer);
+  recapToken += 1;
+}
+
+function awardHoldMs(award) {
+  if (!award) return 450;
+  if (award.hit) {
+    const call = comboCall(award.streak);
+    if (!call.title) return 450;
+    return shoutHoldMs(comboHeat(award.streak), call.tier);
+  }
+  const broke = comboBreak(award.lostStreak);
+  if (!broke.title) return 450;
+  return shoutHoldMs(comboHeat(award.lostStreak), broke.tier);
+}
+
+function liveFinishSnap(mode, ended) {
+  const run = state.runs[mode];
+  if (!run) return null;
+  return {
+    ended,
+    asked: run.asked ? run.asked.size : 0,
+    correct: run.correct || 0,
+    points: run.points || 0,
+    bestStreak: run.bestStreak || 0,
+  };
+}
+
+function scheduleRecap(mode, ended, award) {
+  cancelRecap();
+  const token = recapToken;
+  const firstWait = ended === "exited" ? 0 : awardHoldMs(award);
+
+  function openRecap() {
+    if (token !== recapToken) return;
+    endRun(state, mode, ended);
+    state.recapFresh = true;
+    setHash("breakdown", mode);
+  }
+
+  function showFinish() {
+    if (token !== recapToken) return;
+    const snap = liveFinishSnap(mode, ended);
+    if (!snap) {
+      openRecap();
+      return;
+    }
+    playFinish(snap);
+    const fin = { ...finishCall(snap), heat: comboHeat(snap.bestStreak || 0) };
+    shoutCombo(fin);
+    recapTimer = window.setTimeout(openRecap, shoutHoldMs(fin.heat, fin.tier));
+  }
+
+  if (firstWait <= 0) showFinish();
+  else recapTimer = window.setTimeout(showFinish, firstWait);
+}
+
 function showBreakdown(mode, ended) {
-  endRun(state, mode, ended);
-  setHash("breakdown", mode);
+  scheduleRecap(mode, ended, null);
 }
 
 function replayMisses(mode, names) {
+  cancelRecap();
   if (!PLAYABLE_MODES.includes(mode) || !names || !names.length) return;
+  launch(mode);
   beginReplay(state, mode, names);
   if (readHash().mode === mode) enterMode({ mode, boardMode: null });
   else setHash(mode);
@@ -132,6 +215,8 @@ async function startFreshRun() {
     });
     if (!ok) return;
   }
+  cancelRecap();
+  launch(mode);
   resetRun(state, mode);
   if (mode === MODES.MAP) startMap();
   else startQuiz();
@@ -141,9 +226,14 @@ async function startFreshRun() {
 
 function submitQuiz(index) {
   gradeQuizAnswer(state, index);
-  paintQuiz();
-  const run = currentRun(state);
-  if (run && run.finished) showBreakdown(state.mode, "finished");
+  announceAward();
+  afterSound(() => {
+    const run = currentRun(state);
+    const award = run && run.lastAward;
+    const done = !!(run && run.finished);
+    paintQuiz();
+    if (done) scheduleRecap(state.mode, "finished", award);
+  });
 }
 
 function focusCountry(name) {
@@ -186,12 +276,17 @@ function startMap() {
 
 function applyGuess(result) {
   if (!result) return;
-  mapView.showGuess(result);
-  focusCountry(result.guessed ? result.guessed.name : result.target.name);
-  renderMapResult(result);
-  renderScore(state);
-  const run = currentRun(state);
-  if (run && run.finished) showBreakdown(state.mode, "finished");
+  announceAward();
+  afterSound(() => {
+    const run = currentRun(state);
+    const award = run && run.lastAward;
+    const done = !!(run && run.finished);
+    mapView.showGuess(result);
+    focusCountry(result.guessed ? result.guessed.name : result.target.name);
+    renderMapResult(result);
+    renderScore(state);
+    if (done) scheduleRecap(state.mode, "finished", award);
+  });
 }
 
 function submitCountryGuess(geoName, latlng) {
@@ -204,6 +299,7 @@ function submitMiss(latlng) {
 
 function enterMode(route) {
   const mode = typeof route === "string" ? route : route.mode;
+  if (mode !== MODES.BREAKDOWN) cancelRecap();
   const boardMode = typeof route === "string" ? null : route.boardMode;
   const recapAt = typeof route === "object" && route ? route.recapAt : null;
   state.mode = mode;
@@ -217,7 +313,7 @@ function enterMode(route) {
   }
 
   if (mode === MODES.HOW) {
-    renderGuide();
+    renderGuide(boardMode);
     return;
   }
 
@@ -228,7 +324,9 @@ function enterMode(route) {
 
   if (mode === MODES.BREAKDOWN) {
     if (recapAt && boardMode) state.breakdown = scoreByAt(boardMode, recapAt);
-    renderBreakdown(state, replayMisses, { fromBoard: !!recapAt });
+    const fresh = !!state.recapFresh;
+    state.recapFresh = false;
+    renderBreakdown(state, replayMisses, { fromBoard: !!recapAt, fresh });
     if (state.boardMode === MODES.MAP) {
       bindMap();
       setTimeout(() => mapView.invalidateSize(), 80);
@@ -290,6 +388,7 @@ async function onToggleExplore() {
       });
       if (!ok) return;
     }
+    cancelRecap();
     resetRun(state, MODES.MAP);
     renderScore(state);
     toggleExplore(state);
@@ -308,10 +407,12 @@ async function onToggleExplore() {
 
 function bindInput() {
   bindHash((mode) => enterMode(mode));
+  bindUiSfx();
   document.querySelectorAll("a.game-card[data-mode]").forEach((card) => {
     card.addEventListener("click", (e) => {
       e.preventDefault();
       const next = card.dataset.mode;
+      launch(next);
       if (readHash().mode === next) enterMode({ mode: next, boardMode: null });
       else setHash(next);
     });
@@ -328,6 +429,7 @@ function bindInput() {
       });
       if (!ok) return false;
     }
+    cancelRecap();
     resetAllRuns(state);
     if (state.mode === MODES.HOME) renderHome(state);
     else if (state.mode === MODES.SCOREBOARD) renderScoreboard(state);
@@ -342,10 +444,14 @@ function bindInput() {
   });
 
   function goNextQuiz() {
+    cancelRecap();
     const run = currentRun(state);
     if (run && run.finished) {
       if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
       else resetRun(state, state.mode);
+      launch(state.mode);
+    } else {
+      playNext();
     }
     startQuiz();
   }
@@ -354,10 +460,14 @@ function bindInput() {
   bindQuizKeys(state, submitQuiz, goNextQuiz);
   el.newMapTarget.addEventListener("click", () => {
     if (state.map.explore) return;
+    cancelRecap();
     const run = currentRun(state);
     if (run && run.finished) {
       if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
       else resetRun(state, MODES.MAP);
+      launch(MODES.MAP);
+    } else {
+      playNext();
     }
     startMap();
   });
@@ -375,9 +485,14 @@ function bindInput() {
     });
   }
   bindTypeInput(state, currentPool, () => {
-    paintQuiz();
-    const run = currentRun(state);
-    if (run && run.finished) showBreakdown(state.mode, "finished");
+    announceAward();
+    afterSound(() => {
+      const run = currentRun(state);
+      const award = run && run.lastAward;
+      const done = !!(run && run.finished);
+      paintQuiz();
+      if (done) scheduleRecap(state.mode, "finished", award);
+    });
   });
   bindAnswerMode((style) => {
     if (state.mode !== MODES.FLAGS && state.mode !== MODES.CAPITALS) return;

@@ -73,6 +73,7 @@ function finishIfComplete(state) {
   if (total <= 0 || run.asked.size < total) return;
   if (policy === "misses" && run.misses.size > 0) return;
   run.finished = true;
+  pauseClock(run);
 }
 
 export function beginReplay(state, mode, names) {

@@ -7,6 +7,10 @@ export function readHash() {
   const path = raw.replace(/\/+$/, "") || "/";
   if (path === "/") return { mode: "home", boardMode: null };
   const parts = path.replace(/^\//, "").split("/").filter(Boolean);
+  if (parts[0] === "how") {
+    const boardMode = PLAYABLE_MODES.includes(parts[1]) ? parts[1] : null;
+    return { mode: "how", boardMode };
+  }
   if (parts[0] === "scoreboard") {
     const boardMode = PLAYABLE_MODES.includes(parts[1]) ? parts[1] : null;
     return { mode: "scoreboard", boardMode };
@@ -35,7 +39,7 @@ export function setHash(mode, boardMode, recapAt) {
   let next = "#/";
   if (mode === "breakdown" && boardMode && recapAt) {
     next = `#/breakdown/${boardMode}/${recapAt}`;
-  } else if ((mode === "scoreboard" || mode === "breakdown") && boardMode) {
+  } else if ((mode === "scoreboard" || mode === "breakdown" || mode === "how") && boardMode) {
     next = `#/${mode}/${boardMode}`;
   } else if (mode === "scoreboard") next = "#/scoreboard";
   else if (mode !== "home") next = `#/${mode}`;

@@ -1,3 +1,4 @@
+import { comboBreak, comboCall, comboHeat, shoutHoldMs } from "../game/combo.js";
 import { themeForCountry } from "../game/regions.js";
 import { poolSize, STREAK_STEP, streakBonus } from "../game/run.js";
 import { modeSettings } from "../game/settings.js";
@@ -16,42 +17,80 @@ function popValue(node, value) {
 }
 
 let flareTimer = 0;
+let shoutTimer = 0;
 let brokeTimer = 0;
+
+const HEATS = [2, 3, 4, 5, 6, 7, 8];
+const HEAT_CLASS = HEATS.map((n) => `is-heat-${n}`);
+const BODY_COMBO = [
+  "is-combo",
+  "is-combo-fire",
+  "is-combo-broke",
+  "is-combo-god",
+  ...HEATS.map((n) => `is-combo-heat-${n}`),
+];
+
+function heatClass(heat) {
+  return heat ? `is-heat-${heat}` : "";
+}
 
 function hideFlare() {
   if (!el.streakFlare) return;
-  el.streakFlare.classList.remove("is-show", "is-max", "is-broke");
+  el.streakFlare.classList.remove("is-show", "is-max", "is-broke", "is-god", ...HEAT_CLASS);
   el.streakFlare.hidden = true;
 }
 
+function hideShout() {
+  if (!el.comboShout) return;
+  el.comboShout.hidden = true;
+  el.comboShout.className = "combo-shout";
+  document.body.classList.remove(...BODY_COMBO);
+}
+
+export function shoutCombo({ title, tier, pts, heat }) {
+  showComboShout({ title, tier, pts, heat });
+}
+
+function showComboShout({ title, tier, pts, heat = 0 }) {
+  if (!el.comboShout || !title) return;
+  if (el.comboShoutTitle) el.comboShoutTitle.textContent = title;
+  if (el.comboShoutPts) el.comboShoutPts.textContent = pts || "";
+  el.comboShout.hidden = false;
+  el.comboShout.className = "combo-shout";
+  void el.comboShout.offsetWidth;
+  const heatCls = heatClass(heat);
+  el.comboShout.className = `combo-shout is-show is-${tier || "hot"}${heatCls ? ` ${heatCls}` : ""}`;
+  document.body.classList.remove(...BODY_COMBO);
+  document.body.classList.add("is-combo");
+  if (tier === "fire" || tier === "god") document.body.classList.add("is-combo-fire");
+  if (tier === "god") document.body.classList.add("is-combo-god");
+  if (tier === "broke") document.body.classList.add("is-combo-broke");
+  if (heat) document.body.classList.add(`is-combo-heat-${heat}`);
+  window.clearTimeout(shoutTimer);
+  shoutTimer = window.setTimeout(hideShout, shoutHoldMs(heat, tier));
+}
+
 function showStreakFlare({ hit, streak, bonus, lostStreak, lostBonus }) {
+  const call = hit ? comboCall(streak) : comboBreak(lostStreak);
+  const heat = comboHeat(hit ? streak : lostStreak);
+  const pts = hit && bonus > 0 ? `+${bonus}` : !hit && lostBonus > 0 ? `−${lostBonus}` : "";
+  const broke = !hit && lostBonus > 0;
+  const max = heat >= 5;
+  if (call.title) showComboShout({ title: call.title, tier: call.tier, pts, heat });
   if (!el.streakFlare) return;
-  let kicker = "";
-  let pts = "";
-  let broke = false;
-  let max = false;
-  if (hit && bonus > 0) {
-    kicker = streak >= 5 ? "ON FIRE" : streak >= 3 ? "HOT STREAK" : `STREAK ×${streak}`;
-    pts = `+${bonus}`;
-    max = streak >= 5;
-  } else if (!hit && lostBonus > 0) {
-    kicker = lostStreak >= 5 ? "FIRE OUT" : "STREAK BROKEN";
-    pts = `−${lostBonus}`;
-    broke = true;
-    max = lostStreak >= 5;
-  } else {
-    return;
-  }
-  if (el.streakFlareKicker) el.streakFlareKicker.textContent = kicker;
+  if (!call.title && !pts) return;
+  if (el.streakFlareKicker) el.streakFlareKicker.textContent = call.title || (hit ? `STREAK ×${streak}` : "");
   if (el.streakFlarePts) el.streakFlarePts.textContent = pts;
   el.streakFlare.hidden = false;
-  el.streakFlare.classList.remove("is-show", "is-max", "is-broke");
+  el.streakFlare.classList.remove("is-show", "is-max", "is-broke", "is-god", ...HEAT_CLASS);
   void el.streakFlare.offsetWidth;
   el.streakFlare.classList.toggle("is-max", max);
   el.streakFlare.classList.toggle("is-broke", broke);
+  el.streakFlare.classList.toggle("is-god", heat >= 7);
+  if (heat) el.streakFlare.classList.add(heatClass(heat));
   el.streakFlare.classList.add("is-show");
   window.clearTimeout(flareTimer);
-  flareTimer = window.setTimeout(hideFlare, broke ? 1100 : 900);
+  flareTimer = window.setTimeout(hideFlare, broke ? 1100 : heat >= 8 ? 1050 : 900);
 }
 
 function flashGain(points) {
@@ -64,7 +103,7 @@ function flashGain(points) {
 
 function coolStreak() {
   if (!el.streakStat) return;
-  el.streakStat.classList.remove("is-hot", "is-fire");
+  el.streakStat.classList.remove("is-hot", "is-fire", "is-god", ...HEAT_CLASS);
   el.streakStat.classList.add("is-broke");
   window.clearTimeout(brokeTimer);
   brokeTimer = window.setTimeout(() => {
@@ -81,12 +120,16 @@ function paintPips(streak) {
 }
 
 function paintStreakChip(streak) {
-  const hot = streak >= 2 && streak < 5;
-  const fire = streak >= 5;
+  const call = comboCall(streak);
+  const heat = comboHeat(streak);
+  const hot = call.tier === "hot";
+  const fire = call.tier === "fire" || call.tier === "god";
   const upcoming = streakBonus(streak + 1);
   if (el.streakStat) {
     el.streakStat.classList.toggle("is-hot", hot);
     el.streakStat.classList.toggle("is-fire", fire);
+    el.streakStat.classList.toggle("is-god", call.tier === "god");
+    HEATS.forEach((n) => el.streakStat.classList.toggle(`is-heat-${n}`, heat === n));
     if (streak > 0) el.streakStat.classList.remove("is-broke");
   }
   if (el.streakLabel) {
@@ -108,12 +151,14 @@ function consumeAward(run) {
   run.lastAward = null;
   if (award.hit) {
     flashGain(award.points);
-    showStreakFlare(award);
-  } else {
+    requestAnimationFrame(() => showStreakFlare(award));
+    return;
+  }
+  requestAnimationFrame(() => {
     showStreakFlare(award);
     if (award.lostBonus > 0) coolStreak();
     else hideFlare();
-  }
+  });
 }
 
 function replayCount(run) {
@@ -164,22 +209,28 @@ export function renderScore(state) {
 
 export function setPlayTitle(mode, boardMode) {
   const game =
-    (mode === "scoreboard" || mode === "breakdown") && boardMode ? boardMode : mode;
+    (mode === "scoreboard" || mode === "breakdown" || mode === "how") && boardMode
+      ? boardMode
+      : mode;
   const extra =
     mode === "scoreboard" ? "scores" : mode === "breakdown" ? "recap" : "";
   if (el.playTitle) {
     if (game === "map" || game === "flags" || game === "capitals") {
       fillLockup(el.playTitle, game, extra);
     } else {
-      el.playTitle.replaceChildren();
-      const text = document.createElement("span");
-      text.className = "game-lockup-name";
-      text.textContent = playTitle(mode);
-      el.playTitle.append(text);
+      const key = `text|${playTitle(mode)}`;
+      if (el.playTitle.dataset.lockup !== key) {
+        el.playTitle.dataset.lockup = key;
+        el.playTitle.replaceChildren();
+        const text = document.createElement("span");
+        text.className = "game-lockup-name";
+        text.textContent = playTitle(mode);
+        el.playTitle.append(text);
+      }
     }
   }
   if (el.playKicker) {
-    const kick = extra ? "" : playKicker(game);
+    const kick = mode === "how" ? "How to play" : extra ? "" : playKicker(game);
     el.playKicker.textContent = kick;
     el.playKicker.hidden = !kick;
   }
@@ -244,6 +295,9 @@ export function showScreen(mode, boardMode) {
     if (el.mapModeChip && el.hudTc) el.hudTc.appendChild(el.mapModeChip);
     if (el.mapTargetBlock && el.hudTc) el.hudTc.appendChild(el.mapTargetBlock);
     if (el.runDock && el.hudBr) el.hudBr.appendChild(el.runDock);
+  } else if (mode === "flags" || mode === "capitals") {
+    if (el.filterWrap && el.controls) el.controls.appendChild(el.filterWrap);
+    if (el.runDock && el.quizArea) el.quizArea.after(el.runDock);
   } else if (isHome && el.homeToolbar && el.filterWrap) {
     el.homeToolbar.appendChild(el.filterWrap);
   } else if (el.controls) {
@@ -299,7 +353,7 @@ function formatGap(km) {
 
 function lostFireHtml(award) {
   if (!award || award.hit || !award.lostBonus) return "";
-  const title = award.lostStreak >= 5 ? "FIRE OUT" : "Streak broken";
+  const title = comboBreak(award.lostStreak).title || "STREAK BROKEN";
   return `<br><span class="streak-hit is-lost">${title} −${award.lostBonus}</span>`;
 }
 
@@ -308,7 +362,7 @@ export function renderMapResult(result) {
   if (result.isCorrect) {
     const bonus = result.award && result.award.bonus;
     const extra = bonus
-      ? `<br><span class="streak-hit">${result.award.streak >= 5 ? "ON FIRE" : result.award.streak >= 3 ? "HOT STREAK" : "Streak"} +${bonus}</span>`
+      ? `<br><span class="streak-hit">${comboCall(result.award.streak).title || "STREAK"} +${bonus}</span>`
       : "";
     setMapFeedback(
       `Correct! That's <strong>${result.target.name}</strong> 🎯${extra}`,

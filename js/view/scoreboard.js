@@ -1,7 +1,7 @@
 import { careerTotals, poolSizes, topScores } from "../game/history.js";
 import { summarizeSelection } from "../game/regions.js";
 import { formatElapsed, PLAYABLE_MODES, runHasProgress } from "../game/run.js";
-import { playTitle } from "./identity.js";
+import { fillLockup } from "./identity.js";
 
 const BLURB = {
   map: "Find the country on the map",
@@ -49,8 +49,9 @@ function renderPicker(root) {
     const kicker = document.createElement("span");
     kicker.className = "game-card-kicker";
     kicker.textContent = "Scoreboard";
-    const title = document.createElement("h2");
-    title.textContent = playTitle(mode);
+    const title = document.createElement("div");
+    title.className = "game-lockup is-pick";
+    fillLockup(title, mode);
     const blurb = document.createElement("p");
     blurb.textContent = BLURB[mode];
     const status = document.createElement("span");

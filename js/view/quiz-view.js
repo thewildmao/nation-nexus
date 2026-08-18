@@ -1,3 +1,4 @@
+import { comboBreak, comboCall } from "../game/combo.js";
 import {
   gradeTypedAnswer,
   isCorrectOption,
@@ -44,7 +45,10 @@ function bindOptions(state, onSelect) {
         btn.classList.add("wrong");
       }
     } else {
-      btn.addEventListener("click", () => onSelect(i));
+      btn.addEventListener("pointerdown", (e) => {
+        if (e.button != null && e.button !== 0) return;
+        onSelect(i);
+      });
     }
 
     el.options.appendChild(btn);
@@ -140,8 +144,9 @@ function renderFeedback(state) {
   const run = currentRun(state);
   if (state.quiz.correct) {
     const award = run && run.lastAward;
+    const call = award && award.bonus ? comboCall(award.streak) : { title: "" };
     const extra = award && award.bonus
-      ? ` ${award.streak >= 5 ? "ON FIRE" : award.streak >= 3 ? "HOT STREAK" : "Streak"} +${award.bonus}`
+      ? ` ${call.title || "STREAK"} +${award.bonus}`
       : "";
     el.feedback.textContent = run && run.finished
       ? `Correct! Set complete — ${run.points} pts · ${run.correct}/${poolSize(run, state.selectedNames)}`
@@ -156,9 +161,10 @@ function renderFeedback(state) {
       ? `Wrong — it was ${state.quiz.country.name}`
       : `Wrong — the capital is ${state.quiz.country.capital}`;
   const award = run && run.lastAward;
+  const lostCall = award && !award.hit ? comboBreak(award.lostStreak) : { title: "" };
   const lost =
     award && !award.hit && award.lostBonus
-      ? ` ${award.lostStreak >= 5 ? "FIRE OUT" : "Streak broken"} −${award.lostBonus}`
+      ? ` ${lostCall.title || "STREAK BROKEN"} −${award.lostBonus}`
       : "";
   el.feedback.textContent =
     run && run.finished

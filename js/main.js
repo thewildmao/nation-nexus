@@ -1,38 +1,39 @@
-// Input → mutate game state → paint views. Files under js/game never touch the DOM.
+// Input → mutate game state → paint views. Rules files never touch the DOM.
 import { countries } from "../data/countries.js";
-import { filterPool, findByGeoName } from "./game/catalog.js";
-import { resolveCountryGuess, resolveMiss, startMapRound, toggleExplore } from "./game/map-round.js";
-import { gradeQuizAnswer, startQuizRound } from "./game/quiz.js";
-import { scoreByAt } from "./game/history.js";
-import { anyRunHasProgress, continueLap, PLAYABLE_MODES, runHasProgress } from "./game/run.js";
-import { beginReplay, createState, currentRun, endRun, MODES, resetAllRuns, resetRun } from "./game/state.js";
-import { bindConfirm, confirmWarn } from "./view/confirm.js";
-import { bindFilterTree } from "./view/filter-tree.js";
-import { renderGuide } from "./view/guide.js";
-import { renderHome } from "./view/home.js";
-import { renderBreakdown } from "./view/breakdown.js";
-import { renderScoreboard } from "./view/scoreboard.js";
-import { bindHash, readHash, setHash } from "./view/nav.js";
-import { bindSettings, closeSettings, isSettingsOpen, prepareSettings, syncSettingsForm } from "./view/settings.js";
-import { bindTimer, syncPlayClock } from "./view/timer.js";
-import { el } from "./view/dom.js";
+import { filterPool } from "./shared/catalog.js";
+import { clampLength, savePool } from "./shared/pool.js";
+import { scoreByAt } from "./shared/history.js";
+import { anyRunHasProgress, PLAYABLE_MODES, runHasProgress } from "./shared/run.js";
+import { beginReplay, createState, currentRun, endRun, MODES, resetAllRuns, resetRun } from "./shared/state.js";
+import { comboBreak, comboCall, comboHeat, finishCall, shoutHoldMs } from "./shared/combo.js";
+import { bindConfirm, confirmWarn } from "./ui/dialog.js";
+import { bindRegionPicker, closeRegionPicker, isRegionPickerOpen } from "./ui/filter-tree.js";
+import { mountGameCards } from "./ui/game-card.js";
+import { bindHash, readHash, setHash } from "./ui/nav.js";
+import { bindSettings, closeSettings, isSettingsOpen, prepareSettings } from "./ui/settings.js";
+import { bindTimer, syncPlayClock } from "./ui/timer.js";
+import { el } from "./ui/dom.js";
+import { renderScore, shoutCombo } from "./ui/score-dock.js";
+import { showScreen } from "./ui/screens.js";
+import { bindUiSfx, playAward, playFinish, playLaunch } from "./ui/sfx.js";
+import { renderGuide } from "./shell/guide.js";
+import { renderHome } from "./shell/home.js";
+import { renderBreakdown } from "./shell/breakdown.js";
+import { renderScoreboard } from "./shell/scoreboard.js";
+import { renderStudy } from "./games/study/view.js";
+import { renderMapPrompt } from "./games/map/hud.js";
 import {
-  applyRegionTheme,
-  renderMapMode,
-  renderMapPrompt,
-  renderMapResult,
-  renderScore,
-  renderWaitingPrompt,
-  setMapFeedback,
-  shoutCombo,
-  showScreen,
-} from "./view/hud.js";
-import * as mapView from "./view/map-view.js";
-import { modeSettings, saveSettings } from "./game/settings.js";
-import { bindAnswerMode, bindQuizKeys, bindTypeInput, renderQuiz } from "./view/quiz-view.js?v=quiz-map2";
-import { comboBreak, comboCall, comboHeat, finishCall, shoutHoldMs } from "./game/combo.js";
-import { bindUiSfx, playAward, playFinish, playLaunch, playNext } from "./view/sfx.js";
-import { renderStudy } from "./view/study-view.js?v=quiz-map2";
+  applyPoolMask,
+  bindMap,
+  enterMap,
+  focusCountry,
+  goNextMap,
+  initMapSession,
+  mapView,
+  onToggleExplore,
+  startMap,
+} from "./games/map/session.js";
+import { bindQuizSession, continueQuizStyle, enterQuiz, initQuizSession, startQuiz } from "./games/quiz/session.js";
 
 const state = createState();
 
@@ -52,82 +53,6 @@ function announceAward() {
 
 function afterSound(fn) {
   requestAnimationFrame(fn);
-}
-
-function currentPool() {
-  return filterPool(state, countries);
-}
-
-function applyPoolMask() {
-  const pool = currentPool();
-  mapView.setActivePool(
-    pool.length === countries.length ? null : pool.map((c) => c.name)
-  );
-}
-
-function bindMap() {
-  mapView.initMap({
-    onCountryClick: submitCountryGuess,
-    onMiss: submitMiss,
-    onExploreSelect: focusExploreCountry,
-    isExplore: () => state.map.explore,
-    isWaiting: () => state.map.waiting,
-  });
-}
-
-function paintQuiz() {
-  renderQuiz(state, submitQuiz, currentPool());
-  renderScore(state);
-}
-
-function startQuiz() {
-  const run = currentRun(state);
-  if (run && run.finished) {
-    if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
-    else resetRun(state, state.mode);
-  }
-  startQuizRound(state, countries);
-  focusCountry(null);
-  paintQuiz();
-  syncPlayClock(state);
-}
-
-async function applyAnswerStyle(style) {
-  const cfg = modeSettings(state);
-  const alreadyOn = cfg.answerStyle === style && state.quiz.answerStyle === style;
-  if (alreadyOn && (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS)) {
-    paintQuiz();
-    return;
-  }
-
-  if (cfg.answerStyle !== style) {
-    const run = state.runs[state.mode];
-    if (PLAYABLE_MODES.includes(state.mode) && runHasProgress(run)) {
-      const ok = await confirmWarn({
-        title: "Change how you answer?",
-        message: "This ends your current run and saves it to the scoreboard.",
-        confirmLabel: "Change and reset",
-      });
-      if (!ok) {
-        syncSettingsForm(state);
-        return;
-      }
-      resetRun(state, state.mode);
-    }
-    cfg.answerStyle = style;
-    saveSettings(state.settings);
-    syncSettingsForm(state);
-  }
-
-  el.answerStyle.forEach((input) => {
-    input.checked = input.value === style;
-  });
-  if (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS) {
-    startQuiz();
-    renderScore(state);
-    return;
-  }
-  renderScore(state);
 }
 
 let recapTimer = 0;
@@ -218,89 +143,23 @@ async function startFreshRun() {
   cancelRecap();
   launch(mode);
   resetRun(state, mode);
-  if (mode === MODES.MAP) startMap();
+  if (mode === MODES.MAP) startMap({ resetView: true });
   else startQuiz();
   renderScore(state);
   syncPlayClock(state);
 }
 
-function submitQuiz(index) {
-  gradeQuizAnswer(state, index);
-  announceAward();
-  afterSound(() => {
-    const run = currentRun(state);
-    const award = run && run.lastAward;
-    const done = !!(run && run.finished);
-    paintQuiz();
-    if (done) scheduleRecap(state.mode, "finished", award);
-  });
-}
-
-function focusCountry(name) {
-  state.focusName = name || null;
-  applyRegionTheme(state.focusName);
-}
-
-function focusExploreCountry(geoName) {
-  const match = findByGeoName(geoName);
-  focusCountry(match ? match.name : null);
-}
-
-function paintMapChrome() {
-  renderMapMode(state);
-  renderMapPrompt(state);
-  renderScore(state);
-}
-
-function startMap() {
-  const run = currentRun(state);
-  if (run && run.finished) {
-    if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
-    else resetRun(state, MODES.MAP);
-  }
-  startMapRound(state, countries);
-  focusCountry(null);
-  applyPoolMask();
-  mapView.clearResult();
-  mapView.resetCountryStyles();
-  mapView.resetCamera();
-  paintMapChrome();
-  const after = currentRun(state);
-  if (after && after.finished) {
-    setMapFeedback("Set complete — play again to reshuffle this set.", "var(--muted)");
-  } else {
-    renderWaitingPrompt();
-  }
-  syncPlayClock(state);
-}
-
-function applyGuess(result) {
-  if (!result) return;
-  announceAward();
-  afterSound(() => {
-    const run = currentRun(state);
-    const award = run && run.lastAward;
-    const done = !!(run && run.finished);
-    mapView.showGuess(result);
-    focusCountry(result.guessed ? result.guessed.name : result.target.name);
-    renderMapResult(result);
-    renderScore(state);
-    if (done) scheduleRecap(state.mode, "finished", award);
-  });
-}
-
-function submitCountryGuess(geoName, latlng) {
-  applyGuess(resolveCountryGuess(state, geoName, latlng));
-}
-
-function submitMiss(latlng) {
-  applyGuess(resolveMiss(state, latlng));
+function playGame(mode) {
+  launch(mode);
+  if (readHash().mode === mode) enterMode({ mode, boardMode: null });
+  else setHash(mode);
 }
 
 function enterMode(route) {
   const mode = typeof route === "string" ? route : route.mode;
   if (mode !== MODES.BREAKDOWN) cancelRecap();
   if (isSettingsOpen()) closeSettings();
+  if (isRegionPickerOpen()) closeRegionPicker();
   const boardMode = typeof route === "string" ? null : route.boardMode;
   const recapAt = typeof route === "object" && route ? route.recapAt : null;
   state.mode = mode;
@@ -338,142 +197,53 @@ function enterMode(route) {
 
   if (mode === MODES.STUDY) {
     const focusName = typeof route === "object" && route ? route.focusName : null;
-    renderStudy(currentPool(), focusName);
+    renderStudy(filterPool(state, countries), focusName);
     renderScore(state);
     return;
   }
 
   if (mode === MODES.MAP) {
-    document.body.classList.remove("is-recap");
-    if (el.breakdown) el.breakdown.classList.add("hidden");
-    bindMap();
-    applyPoolMask();
-    renderMapMode(state);
-    setTimeout(() => mapView.invalidateSize(), 280);
-    setTimeout(() => {
-      mapView.invalidateSize();
-      if (state.map.explore) {
-        applyPoolMask();
-        paintMapChrome();
-        return;
-      }
-      const run = currentRun(state);
-      const target = state.map.target;
-      const targetInPool = !!(target && state.selectedNames.has(target.name));
-      if (run && !run.finished && targetInPool && state.map.waiting) {
-        applyPoolMask();
-        paintMapChrome();
-        return;
-      }
-      startMap();
-    }, 80);
+    enterMap();
     return;
   }
 
-  const run = currentRun(state);
-  if (
-    state.quiz.mode === state.mode &&
-    state.quiz.answerStyle === modeSettings(state).answerStyle &&
-    state.quiz.country &&
-    !state.quiz.answered &&
-    run &&
-    !run.finished
-  ) {
-    paintQuiz();
-    return;
-  }
-  startQuiz();
-}
-
-async function onToggleExplore() {
-  if (!state.map.explore) {
-    if (runHasProgress(state.runs.map)) {
-      const ok = await confirmWarn({
-        title: "Explore the map?",
-        message: "This resets your map score and streak.",
-        confirmLabel: "Explore",
-      });
-      if (!ok) return;
-    }
-    cancelRecap();
-    resetRun(state, MODES.MAP);
-    renderScore(state);
-    toggleExplore(state);
-    paintMapChrome();
-    applyPoolMask();
-    mapView.enterExplore(state.map.waiting ? null : state.map.lastResult);
-    syncPlayClock(state);
-    return;
-  }
-
-  toggleExplore(state);
-  mapView.exitExplore();
-  startMap();
-  syncPlayClock(state);
+  enterQuiz();
 }
 
 function bindInput() {
   bindHash((mode) => enterMode(mode));
   bindUiSfx();
-  document.querySelectorAll("a.game-card[data-mode]").forEach((card) => {
-    card.addEventListener("click", (e) => {
-      e.preventDefault();
-      const next = card.dataset.mode;
-      launch(next);
-      if (readHash().mode === next) enterMode({ mode: next, boardMode: null });
-      else setHash(next);
-    });
-  });
+  mountGameCards(document.getElementById("gameGrid"), playGame);
 
   bindTimer(state);
   bindConfirm();
-  bindFilterTree(state, async () => {
+  bindRegionPicker(state, async (reason) => {
     if (anyRunHasProgress(state)) {
+      const length = reason === "length";
       const ok = await confirmWarn({
-        title: "Change regions?",
+        title: length ? "Change set length?" : "Change regions?",
         message: "This starts a new score for Nation Needle, Flag Master, and Capital Quest. Your current runs will be saved to each game’s scoreboard.",
-        confirmLabel: "Change regions",
+        confirmLabel: length ? "Change length" : "Change regions",
       });
       if (!ok) return false;
     }
     cancelRecap();
     resetAllRuns(state);
+    state.roundN = clampLength(state.roundN, state.selectedNames.size);
+    savePool(state.selectedNames, state.roundN);
     if (state.mode === MODES.HOME) renderHome(state);
     else if (state.mode === MODES.SCOREBOARD) renderScoreboard(state);
-    else if (state.mode === MODES.STUDY) renderStudy(currentPool());
+    else if (state.mode === MODES.STUDY) renderStudy(filterPool(state, countries));
     else if (state.mode === MODES.MAP) {
       applyPoolMask();
-      if (!state.map.explore) startMap();
+      if (!state.map.explore) startMap({ resetView: true });
     } else {
       startQuiz();
     }
     renderScore(state);
   });
 
-  function goNextQuiz() {
-    cancelRecap();
-    const run = currentRun(state);
-    if (run && run.finished) {
-      if (modeSettings(state).repeatPolicy === "cycle") continueLap(run);
-      else resetRun(state, state.mode);
-      launch(state.mode);
-    } else {
-      playNext();
-    }
-    startQuiz();
-  }
-
-  el.nextBtn.addEventListener("click", goNextQuiz);
-  bindQuizKeys(state, submitQuiz, goNextQuiz);
-  el.newMapTarget.addEventListener("click", () => {
-    if (state.map.explore) return;
-    const live = currentRun(state);
-    if (live && live.finished) return;
-    if (state.map.waiting) return;
-    cancelRecap();
-    playNext();
-    startMap();
-  });
+  el.newMapTarget.addEventListener("click", goNextMap);
   el.toggleExplore.addEventListener("click", onToggleExplore);
   if (el.newGame) el.newGame.addEventListener("click", () => startFreshRun());
   if (el.exitGame) {
@@ -487,34 +257,21 @@ function bindInput() {
       else setHash("home");
     });
   }
-  bindTypeInput(state, currentPool, () => {
-    announceAward();
-    afterSound(() => {
-      const run = currentRun(state);
-      const award = run && run.lastAward;
-      const done = !!(run && run.finished);
-      paintQuiz();
-      if (done) scheduleRecap(state.mode, "finished", award);
-    });
-  });
-  bindAnswerMode((style) => {
-    if (state.mode !== MODES.FLAGS && state.mode !== MODES.CAPITALS) return;
-    applyAnswerStyle(style);
-  });
+  bindQuizSession();
   bindSettings(state, (key, extra = {}) => {
     if (key === "answerStyle") {
-      if (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS) startQuiz();
+      if (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS) continueQuizStyle();
       renderScore(state);
       return;
     }
     if (key === "repeatPolicy" && extra.reset) {
       if (state.mode === MODES.MAP) {
-        if (!state.map.explore) startMap();
+        if (!state.map.explore) startMap({ resetView: true });
       } else if (state.mode === MODES.FLAGS || state.mode === MODES.CAPITALS) {
         startQuiz();
       }
     } else if (key === "hint" && extra.reset && state.mode === MODES.MAP && !state.map.explore) {
-      startMap();
+      startMap({ resetView: true });
     }
     renderMapPrompt(state);
     renderScore(state);
@@ -522,6 +279,22 @@ function bindInput() {
     if (state.mode === MODES.SCOREBOARD) renderScoreboard(state);
   });
 }
+
+initMapSession({
+  state,
+  announceAward,
+  afterSound,
+  cancelRecap,
+  scheduleRecap,
+});
+initQuizSession({
+  state,
+  announceAward,
+  afterSound,
+  cancelRecap,
+  scheduleRecap,
+  focusCountry,
+});
 
 try {
   bindInput();

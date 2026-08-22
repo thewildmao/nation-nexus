@@ -1,0 +1,424 @@
+@keyframes card-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+@keyframes live-glow {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes prompt-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes correct-pulse {
+  0% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+  45% {
+    transform: translateY(-2px);
+    box-shadow: 0 0 0 6px rgba(34, 197, 94, 0.2);
+  }
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes wrong-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  25% {
+    transform: translateX(-5px);
+  }
+  55% {
+    transform: translateX(4px);
+  }
+  80% {
+    transform: translateX(-2px);
+  }
+}
+
+@keyframes next-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stat-pop {
+  0% {
+    transform: scale(1);
+  }
+  40% {
+    transform: scale(1.14);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+@keyframes heat-pulse {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 0 rgba(245, 158, 11, 0);
+  }
+  50% {
+    box-shadow: inset 0 0 12px rgba(245, 158, 11, 0.22);
+  }
+}
+
+@keyframes fire-pulse {
+  0%,
+  100% {
+    box-shadow:
+      inset 0 0 0 0 rgba(249, 115, 22, 0),
+      0 0 0 0 rgba(249, 115, 22, 0);
+  }
+  50% {
+    box-shadow:
+      inset 0 0 20px rgba(249, 115, 22, 0.48),
+      0 0 22px rgba(249, 115, 22, 0.38);
+  }
+}
+
+@keyframes ember-rise {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(0.55);
+  }
+  22% {
+    opacity: 0.95;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-16px) scale(0.25);
+  }
+}
+
+@keyframes pip-flicker {
+  0%,
+  100% {
+    transform: scale(1.08);
+    filter: brightness(1);
+  }
+  45% {
+    transform: scale(1.22);
+    filter: brightness(1.25);
+  }
+}
+
+@keyframes fire-flicker {
+  0%,
+  100% {
+    filter: brightness(1);
+  }
+  40% {
+    filter: brightness(1.18);
+  }
+  70% {
+    filter: brightness(0.9);
+  }
+}
+
+@keyframes recap-kicker {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes recap-stat {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes combo-slam {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -40%) scale(1.7);
+  }
+  14% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(0.92);
+  }
+  28% {
+    transform: translate(-50%, -50%) scale(1.06);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -58%) scale(0.96);
+  }
+}
+
+@keyframes combo-flash {
+  0% { opacity: 0; }
+  18% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+@keyframes flame-lick {
+  0%,
+  100% {
+    transform: scaleY(1) scaleX(1);
+    opacity: 0.9;
+  }
+  50% {
+    transform: scaleY(1.18) scaleX(0.86);
+    opacity: 1;
+  }
+}
+
+@keyframes flare-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.86);
+  }
+  18% {
+    opacity: 1;
+    transform: translateY(0) scale(1.06);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.98);
+  }
+}
+
+@keyframes gain-float {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  20% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -14px);
+  }
+}
+
+@keyframes streak-broke {
+  0% {
+    filter: grayscale(0);
+    transform: scale(1);
+  }
+  40% {
+    filter: grayscale(0.8);
+    transform: scale(0.96);
+  }
+  100% {
+    filter: grayscale(0);
+    transform: scale(1);
+  }
+}
+
+@keyframes overlay-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes overlay-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-out {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body::before,
+  .home:not(.hidden) .home-hero,
+  .home:not(.hidden) .set-board,
+  .home:not(.hidden) .game-card-wrap,
+  .home:not(.hidden) .study-link,
+  .home:not(.hidden) .home-last,
+  .game-card-wrap.is-live::after,
+  .flag-display.is-enter,
+  .country-name-display.is-enter,
+  .option-btn.correct,
+  .option-btn.wrong,
+  .feedback.correct,
+  .feedback.wrong,
+  .next-btn:not(.hidden),
+  .stat-value.is-pop,
+  .stat-float.is-on,
+  .stat.streak.is-hot,
+  .stat.streak.is-fire,
+  .stat.streak.is-god,
+  .stat.streak.is-fire::before,
+  .stat.streak.is-fire::after,
+  .stat.streak.is-broke,
+  .streak-flare.is-show,
+  .streak-flare.is-max.is-show,
+  .streak-flare.is-god.is-show,
+  .streak-flare.is-max .streak-flare-flames::before,
+  .streak-flare.is-max .streak-flare-flames::after,
+  .combo-shout.is-show,
+  .combo-shout.is-fire .combo-shout-title,
+  .combo-shout.is-god .combo-shout-title,
+  .combo-shout.is-heat-6 .combo-shout-title,
+  .combo-shout.is-heat-8 .combo-shout-title,
+  body.is-combo::after,
+  .breakdown-card.is-fresh .confirm-kicker,
+  .breakdown-card.is-fresh .scoreboard-stats dd,
+  .breakdown-card.is-fresh .breakdown-turn,
+  .breakdown-card.is-fresh .breakdown-miss,
+  .streak-pips i,
+  .breakdown:not(.hidden) .breakdown-backdrop,
+  .breakdown:not(.hidden) .breakdown-card,
+  .settings-layer.is-open .settings-backdrop,
+  .settings-layer.is-open .settings-panel,
+  .settings-layer.is-leaving .settings-backdrop,
+  .settings-layer.is-leaving .settings-panel,
+  .filter-layer.is-open .filter-backdrop,
+  .filter-layer.is-open .filter-pop,
+  .filter-layer.is-leaving .filter-backdrop,
+  .filter-layer.is-leaving .filter-pop,
+  .confirm-layer.is-open .confirm-backdrop,
+  .confirm-layer.is-open .confirm-panel,
+  .confirm-layer.is-leaving .confirm-backdrop,
+  .confirm-layer.is-leaving .confirm-panel {
+    animation: none;
+  }
+
+  .streak-flare.is-show {
+    opacity: 1;
+    transform: none;
+  }
+
+  .combo-shout.is-show {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  .stat-float.is-on {
+    opacity: 1;
+    transform: translate(-50%, -8px);
+  }
+
+  .game-card-wrap,
+  .game-card-play,
+  .game-card-bar > span,
+  .home-btn,
+  .map-chip,
+  .study-link,
+  .option-btn,
+  .study-card,
+  .study-flag,
+  .streak-pips i {
+    transition: none;
+  }
+
+  .stat.streak.is-fire::before,
+  .stat.streak.is-fire::after,
+  .streak-flare-flames {
+    display: none;
+  }
+
+  .game-card-top::after,
+  .game-card-play {
+    transition: none;
+  }
+
+  .game-card-wrap:hover .game-card-play,
+  .game-card-wrap:focus-within .game-card-play {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+
+  .game-card-wrap:hover,
+  .home-btn:active,
+  .map-chip:active,
+  .study-link:active,
+  .study-card:hover,
+  .option-btn:active:not(:disabled),
+  .study-card:hover .study-flag {
+    transform: none;
+    scale: 1;
+  }
+}

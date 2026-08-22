@@ -10,100 +10,79 @@
   <link rel="preload" as="image" href="assets/nation_needle.png" />
   <link rel="preload" as="image" href="assets/flag_master.png" />
   <link rel="preload" as="image" href="assets/capital_quest.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700&family=Outfit:wght@500;600;700;800&display=swap" />
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
         integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-  <link rel="stylesheet" href="styles.css?v=quiz-miss" />
+  <link rel="stylesheet" href="css/tokens.css?v=jump1" />
+  <link rel="stylesheet" href="css/base.css?v=jump1" />
+  <link rel="stylesheet" href="css/home.css?v=jump1" />
+  <link rel="stylesheet" href="css/chrome.css?v=jump1" />
+  <link rel="stylesheet" href="css/overlays.css?v=jump1" />
+  <link rel="stylesheet" href="css/quiz.css?v=jump1" />
+  <link rel="stylesheet" href="css/map.css?v=jump1" />
+  <link rel="stylesheet" href="css/study.css?v=jump1" />
+  <link rel="stylesheet" href="css/motion.css?v=jump1" />
 </head>
 <body class="is-home">
   <div class="container">
     <section id="home" class="home">
+      <div class="home-watermark" aria-hidden="true">
+        <img src="assets/main_game_logo.png" alt="" />
+      </div>
       <header class="home-header">
-        <h1 class="home-mark">
-          <img class="game-logo is-home" src="assets/main_game_logo.png" alt="Nation Nexus" />
-        </h1>
+        <a class="home-brand" href="#/" aria-label="Nation Nexus">
+          <img class="game-logo is-home" src="assets/main_game_logo.png" alt="" />
+        </a>
         <div class="home-header-links">
-          <a class="ghost-link" href="#/how">How to play</a>
-          <a class="scoreboard-link is-compact" href="#/scoreboard"><span class="link-wide">Scoreboard</span><span class="link-narrow">Scores</span></a>
+          <a class="home-btn is-outline" href="#/how">How to play</a>
+          <a class="home-btn is-solid" href="#/scoreboard">Scoreboard</a>
         </div>
       </header>
+      <section class="home-hero">
+        <h1>Choose your challenge</h1>
+        <p>Learn the countries. Map, flags, and capitals.</p>
+      </section>
       <div class="home-toolbar" id="homeToolbar"></div>
-      <div class="game-grid" id="gameGrid">
-        <div class="game-card-wrap" data-card="map">
-          <a class="game-card-chip game-card-scores" href="#/scoreboard/map" title="Scoreboard" aria-label="Scoreboard">🥇</a>
-          <a class="game-card-chip game-card-help" href="#/how/map" title="How to Play" aria-label="How to Play">?</a>
-          <a class="game-card" href="#/map" data-mode="map">
-            <div class="game-card-top">
-              <img class="game-logo is-card" src="assets/nation_needle.png" alt="Nation Needle" />
-              <span class="game-card-badge hidden" data-badge="map">In progress</span>
-              <span class="game-card-play" data-status="map">Play</span>
-            </div>
-            <p>A country is named. Click it on the map.</p>
-            <div class="game-card-progress hidden" data-progress="map">
-              <div class="game-card-bar"><span></span></div>
-              <span class="game-card-count" data-count="map"></span>
-            </div>
-            <p class="game-card-meta" data-meta="map"></p>
-          </a>
-        </div>
-        <div class="game-card-wrap" data-card="flags">
-          <a class="game-card-chip game-card-scores" href="#/scoreboard/flags" title="Scoreboard" aria-label="Scoreboard">🥇</a>
-          <a class="game-card-chip game-card-help" href="#/how/flags" title="How to Play" aria-label="How to Play">?</a>
-          <a class="game-card" href="#/flags" data-mode="flags">
-            <div class="game-card-top">
-              <img class="game-logo is-card" src="assets/flag_master.png" alt="Flag Master" />
-              <span class="game-card-badge hidden" data-badge="flags">In progress</span>
-              <span class="game-card-play" data-status="flags">Play</span>
-            </div>
-            <p>See a flag. Pick the country.</p>
-            <div class="game-card-progress hidden" data-progress="flags">
-              <div class="game-card-bar"><span></span></div>
-              <span class="game-card-count" data-count="flags"></span>
-            </div>
-            <p class="game-card-meta" data-meta="flags"></p>
-          </a>
-        </div>
-        <div class="game-card-wrap" data-card="capitals">
-          <a class="game-card-chip game-card-scores" href="#/scoreboard/capitals" title="Scoreboard" aria-label="Scoreboard">🥇</a>
-          <a class="game-card-chip game-card-help" href="#/how/capitals" title="How to Play" aria-label="How to Play">?</a>
-          <a class="game-card" href="#/capitals" data-mode="capitals">
-            <div class="game-card-top">
-              <img class="game-logo is-card" src="assets/capital_quest.png" alt="Capital Quest" />
-              <span class="game-card-badge hidden" data-badge="capitals">In progress</span>
-              <span class="game-card-play" data-status="capitals">Play</span>
-            </div>
-            <p>See a country. Pick its capital.</p>
-            <div class="game-card-progress hidden" data-progress="capitals">
-              <div class="game-card-bar"><span></span></div>
-              <span class="game-card-count" data-count="capitals"></span>
-            </div>
-            <p class="game-card-meta" data-meta="capitals"></p>
-          </a>
-        </div>
-      </div>
-      <div class="home-links">
-        <a class="study-link" href="#/study">Study the countries</a>
-      </div>
+      <div class="game-grid" id="gameGrid"></div>
+      <a class="study-link" href="#/study">
+        <span class="study-link-main">
+          <span class="study-link-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+              <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+            </svg>
+          </span>
+          <span class="study-link-copy">
+            <strong>Study the countries</strong>
+            <span>Flags, capitals, and regions — no timer.</span>
+          </span>
+        </span>
+        <span class="study-link-go" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </span>
+      </a>
+      <div class="home-last hidden" id="homeLast"></div>
     </section>
 
     <div id="playChrome" class="play-chrome hidden">
-      <div class="play-chrome-mark">
-        <div id="playTitle" class="play-title game-lockup">Nation Needle</div>
-      </div>
-      <div class="play-chrome-bar">
-        <a class="btn-glass back-games" id="backHome" href="#/">← Games</a>
-        <div class="play-chrome-brand" id="playBrand">
+      <header class="play-nav">
+        <a class="play-nav-btn is-ghost" id="backHome" href="#/">Exit</a>
+        <p class="play-nav-title" id="playTitle">Nation Needle</p>
+        <div class="play-nav-end" id="playBrand">
           <p class="play-kicker" id="playKicker">Find the country</p>
           <div class="map-mode-chip replay-chip" id="replayChip" hidden></div>
-        </div>
-        <div class="play-chrome-actions">
           <div class="run-actions" id="runActions">
-            <button type="button" class="btn-glass is-ok" id="newGame">New game</button>
-            <button type="button" class="btn-glass is-danger" id="exitGame">Exit game</button>
+            <button type="button" class="play-nav-btn is-ghost" id="newGame">New game</button>
+            <button type="button" class="play-nav-btn is-ghost" id="exitGame">Exit game</button>
           </div>
-          <a class="btn-glass" id="scoreboardNav" href="#/scoreboard"><span class="link-wide">Scoreboard</span><span class="link-narrow">Scores</span></a>
-          <button type="button" class="btn-glass settings-btn" id="settingsBtn" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settingsOverlay">⚙</button>
+          <a class="play-nav-btn is-ghost" id="scoreboardNav" href="#/scoreboard">Scores</a>
+          <button type="button" class="play-nav-btn is-ghost is-icon" id="settingsBtn" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settingsOverlay">⚙</button>
         </div>
-      </div>
+      </header>
     </div>
 
     <section id="guide" class="guide hidden">
@@ -145,37 +124,15 @@
 
     <!-- Map Quiz -->
     <div id="mapArea" class="is-guess">
+      <div class="play-prompt" id="mapPromptSlot"></div>
       <div class="map-wrap">
         <div id="map"></div>
         <div class="map-hud" id="mapPrompt">
           <div class="hud-tl" id="hudTl">
             <div class="filter-wrap" id="filterWrap">
               <button type="button" class="filter-toggle" id="filterToggle" aria-expanded="false" aria-controls="filterLayer">
-                All regions ▾
+                World ▾
               </button>
-              <div class="filter-layer" id="filterLayer" hidden>
-                <button type="button" class="filter-backdrop" id="filterBackdrop" tabindex="-1" aria-label="Apply region changes"></button>
-                <div class="filter-pop" id="filterPop" role="dialog" aria-modal="true" aria-labelledby="filterTitle">
-                  <div class="filter-pop-head">
-                    <h2 id="filterTitle">Regions</h2>
-                    <span class="filter-pop-title" id="filterPopTitle">0 / 0</span>
-                  </div>
-                  <div class="filter-pop-tools">
-                    <div class="filter-pop-actions">
-                      <button type="button" id="filterAll">All</button>
-                      <button type="button" id="filterNone">None</button>
-                    </div>
-                    <div class="filter-pop-actions">
-                      <button type="button" id="filterExpand">Expand</button>
-                      <button type="button" id="filterCollapse">Collapse</button>
-                    </div>
-                  </div>
-                  <div class="filter-tree" id="filterTree"></div>
-                  <div class="filter-pop-foot">
-                    <button type="button" class="btn-glass" id="filterDone">Done</button>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
           <div class="hud-tc" id="hudTc">
@@ -264,6 +221,33 @@
   <div id="comboShout" class="combo-shout" hidden aria-hidden="true">
     <span class="combo-shout-title" id="comboShoutTitle"></span>
     <span class="combo-shout-pts" id="comboShoutPts"></span>
+  </div>
+
+  <div class="filter-layer" id="filterLayer" hidden>
+    <button type="button" class="filter-backdrop" id="filterBackdrop" tabindex="-1" aria-label="Cancel region changes"></button>
+    <div class="filter-pop" id="filterPop" role="dialog" aria-modal="true" aria-labelledby="filterTitle" tabindex="-1">
+      <div class="filter-pop-head">
+        <h2 id="filterTitle">Your set</h2>
+        <span class="filter-pop-title" id="filterPopTitle">0 / 0</span>
+      </div>
+      <div class="filter-sets" id="filterSets" role="group" aria-label="Common sets"></div>
+      <div class="filter-search">
+        <input id="filterSearch" type="search" placeholder="Search countries" autocomplete="off" spellcheck="false" aria-label="Search countries" />
+      </div>
+      <div class="filter-tabs" id="filterTabs" role="tablist" aria-label="Continents"></div>
+      <div class="filter-pop-tools" id="filterTools">
+        <button type="button" id="filterExpand">Expand all</button>
+        <button type="button" id="filterCollapse">Collapse all</button>
+      </div>
+      <div class="filter-grid" id="filterGrid"></div>
+      <div class="filter-pop-foot">
+        <div class="filter-pop-actions">
+          <button type="button" id="filterAll">All</button>
+          <button type="button" id="filterNone">None</button>
+        </div>
+        <button type="button" class="btn-glass" id="filterDone">Done</button>
+      </div>
+    </div>
   </div>
 
   <div class="confirm-layer" id="confirmWrap" hidden>
@@ -380,6 +364,6 @@
       document.body.append(pre);
     });
   </script>
-  <script type="module" src="js/main.js?v=quiz-miss2"></script>
+  <script type="module" src="js/main.js?v=jump1"></script>
 </body>
 </html>

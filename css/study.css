@@ -1,0 +1,279 @@
+#studyArea {
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 2rem;
+  flex: 1;
+}
+
+.study-search {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.study-search input {
+  flex: 1;
+  min-width: 0;
+  background: var(--elevated);
+  color: var(--text);
+  border: 1px solid var(--border-strong);
+  border-radius: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  font-size: 1rem;
+}
+
+.study-search input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.study-search-count {
+  flex-shrink: 0;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--muted);
+}
+
+.study-empty {
+  grid-column: 1 / -1;
+  color: var(--muted);
+  font-weight: 600;
+  padding: 1.2rem 0.2rem;
+}
+
+.study-card {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-radius: 12px;
+  padding: 1.1rem 0.9rem;
+  text-align: center;
+  cursor: pointer;
+  transition: transform 0.2s ease-out, border-color 0.2s ease-out;
+}
+
+.study-card:hover {
+  transform: translateY(-3px);
+}
+
+.study-card.is-focus {
+  border-color: color-mix(in srgb, var(--accent) 70%, var(--glass-border));
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.22),
+    0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+.study-flag {
+  display: inline-block;
+  font-size: 2.8rem;
+  margin-bottom: 0.4rem;
+  transition: transform 0.2s ease-out;
+}
+
+.study-card:hover .study-flag {
+  transform: scale(1.08);
+}
+
+.study-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.study-capital {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-top: 0.2rem;
+}
+
+.study-region {
+  font-size: 0.7rem;
+  color: var(--accent);
+  margin-top: 0.35rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.country-page {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.country-back {
+  align-self: flex-start;
+  color: var(--muted);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.country-back:hover {
+  color: var(--text);
+}
+
+.country-layout {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
+.country-card {
+  background: var(--glass-strong);
+  border: 1px solid color-mix(in srgb, var(--region-color, var(--glass-border)) 55%, var(--glass-border));
+  border-radius: 16px;
+  padding: 1.15rem 1.15rem 1.05rem;
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--region-color, transparent) 16%, transparent);
+}
+
+.country-flag {
+  font-size: 3rem;
+  line-height: 1;
+  margin-bottom: 0.45rem;
+}
+
+.country-card h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.country-place {
+  color: var(--region-color, var(--accent));
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin: 0.3rem 0 0.85rem;
+}
+
+.country-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0;
+}
+
+.country-facts div {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: baseline;
+}
+
+.country-facts dt {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.country-facts dd {
+  font-weight: 700;
+  text-align: right;
+}
+
+.country-near {
+  margin-top: 1rem;
+}
+
+.country-near p {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.country-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.country-chips a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.22rem 0.5rem;
+  border-radius: 999px;
+  text-decoration: none;
+  color: var(--text);
+  background: var(--glass);
+  border: 1px solid var(--glass-border);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.country-chips a:hover {
+  border-color: var(--accent);
+}
+
+.country-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 1.05rem;
+}
+
+.country-fun {
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(241, 245, 249, 0.1);
+}
+
+.country-fun p {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.4rem;
+}
+
+.country-fun ul {
+  margin: 0;
+  padding-left: 1.05rem;
+  color: var(--text);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+.country-fun li + li {
+  margin-top: 0.35rem;
+}
+
+.country-map-host {
+  position: relative;
+  min-width: 0;
+  min-height: 22rem;
+  height: 100%;
+}
+
+.country-map-wrap {
+  position: relative;
+  z-index: 0;
+  min-height: 22rem;
+  height: 100%;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+
+#countryMap,
+#countryMap.leaflet-container {
+  position: absolute;
+  inset: 0;
+  height: 100% !important;
+  width: 100% !important;
+  min-height: 0;
+  background: #0b1220;
+}

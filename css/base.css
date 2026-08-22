@@ -1,0 +1,168 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  line-height: 1.5;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 50% at 50% -10%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 60%),
+    radial-gradient(ellipse 50% 40% at 80% 100%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 55%);
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 1.25rem 1rem 3rem;
+}
+
+body.is-home .container {
+  max-width: 72rem;
+  padding: 1.5rem 1rem 4rem;
+}
+
+@media (min-width: 640px) {
+  body.is-home .container {
+    padding: 1.5rem 1.5rem 4rem;
+  }
+}
+
+body.is-home .controls,
+body.is-home .run-dock {
+  display: none !important;
+}
+
+body.is-recap .map-hud,
+body.is-recap .play-chrome,
+body.is-recap .controls {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.play-chrome.hidden,
+.home.hidden {
+  display: none;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.boot-error {
+  margin: 1rem;
+  padding: 0.8rem;
+  background: #450a0a;
+  color: #fecaca;
+  border-radius: 8px;
+  white-space: pre-wrap;
+}
+
+body.is-play .container {
+  max-width: none;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+}
+
+body.is-map {
+  height: 100dvh;
+  overflow: hidden;
+}
+
+body.is-map .container {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+}
+
+body.is-play .container > .run-dock {
+  flex: 0 0 auto;
+  width: 100%;
+  margin-top: auto;
+}
+
+/* Quiz card */
+.card {
+  background: var(--elevated);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.25rem 1.4rem;
+  text-align: left;
+  border: 1px solid var(--border);
+}
+
+/* Study grid */
+.study-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0.9rem;
+}
+
+body.is-map footer,
+body.is-play footer {
+  display: none;
+}
+
+body.is-map .controls {
+  display: none;
+}
+
+#toggleExplore {
+  border-radius: 0.5rem;
+  padding: 0.45rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  border: 1px solid var(--border-strong);
+  background: var(--elevated);
+  color: var(--text);
+  transition: scale 150ms ease-out, background-color 150ms ease, border-color 150ms ease, color 150ms ease;
+}
+
+#toggleExplore:hover,
+#toggleExplore:focus-visible {
+  background: var(--surface-2);
+  outline: none;
+}
+
+#toggleExplore:active {
+  scale: 0.96;
+}
+
+.hidden {
+  display: none !important;
+}
+
+footer {
+  text-align: center;
+  margin-top: 2.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}

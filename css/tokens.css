@@ -1,0 +1,35 @@
+:root {
+  --bg: #070b16;
+  --elevated: #0c1424;
+  --surface: #101a2e;
+  --surface-2: #16223c;
+  --card: #101a2e;
+  --text: #e8eef8;
+  --muted: #93a0b8;
+  --subtle: #6b7890;
+  --accent: #3ee0c4;
+  --accent-hover: #2ec9b0;
+  --accent-fg: #06201a;
+  --success: #22c55e;
+  --error: #f07178;
+  --border: #24324c;
+  --border-strong: #35486c;
+  --font-sans: "Figtree", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --home-elevated: var(--elevated);
+  --home-surface: var(--surface);
+  --home-surface-2: var(--surface-2);
+  --home-fg: var(--text);
+  --home-muted: var(--muted);
+  --home-subtle: var(--subtle);
+  --home-border: var(--border);
+  --home-border-strong: var(--border-strong);
+  --home-accent-fg: var(--accent-fg);
+  --font-home: var(--font-sans);
+  --glass: color-mix(in srgb, var(--elevated) 82%, transparent);
+  --glass-strong: color-mix(in srgb, var(--elevated) 92%, transparent);
+  --glass-border: var(--border);
+  --glass-blur: blur(16px) saturate(1.35);
+  --glass-ok: color-mix(in srgb, var(--success) 22%, var(--elevated));
+  --glass-danger: color-mix(in srgb, var(--error) 22%, var(--elevated));
+}
